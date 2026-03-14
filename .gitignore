@@ -1,0 +1,20 @@
+# Sync output
+sync_output/
+sync_audit_*.json
+
+# Intermediate data files
+shopify_customers.json
+shopify_orders.json
+qbo_customers.json
+qbo_invoices.json
+
+# Credentials
+credentials.json
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

@@ -1,0 +1,62 @@
+{
+  "_comment": "Maps Shopify tax line titles to QBO tax codes. Customize for your jurisdiction.",
+  "_usage": "The transform scripts use this file to resolve Shopify tax names to QBO TaxCode references.",
+  
+  "mappings": {
+    "US": {
+      "State Tax": "TAX",
+      "Sales Tax": "TAX",
+      "County Tax": "TAX",
+      "City Tax": "TAX",
+      "WA State Tax": "TAX",
+      "CA State Tax": "TAX",
+      "NY State Tax": "TAX",
+      "TX Sales Tax": "TAX",
+      "FL Sales Tax": "TAX"
+    },
+    "CA": {
+      "GST": "GST",
+      "HST": "HST",
+      "PST": "PST",
+      "QST": "QST",
+      "GST/HST": "HST"
+    },
+    "GB": {
+      "VAT": "20.0% S",
+      "Reduced VAT": "5.0% R",
+      "Zero Rate VAT": "0.0% Z"
+    },
+    "AU": {
+      "GST": "GST",
+      "GST Free": "FRE"
+    },
+    "EU": {
+      "VAT": "TAX",
+      "EU VAT": "TAX"
+    }
+  },
+
+  "defaults": {
+    "taxable": "TAX",
+    "exempt": "NON",
+    "shipping": "NON",
+    "unknown": "TAX"
+  },
+
+  "rate_overrides": {
+    "_comment": "Use these to force a specific QBO tax rate ID for known Shopify tax titles",
+    "examples": {
+      "WA State Tax": {
+        "qbo_tax_code": "TAX",
+        "qbo_tax_rate_id": null,
+        "note": "Set qbo_tax_rate_id to your specific QBO TaxRate Id if auto-detection fails"
+      }
+    }
+  },
+
+  "jurisdiction_detection": {
+    "enabled": true,
+    "strategy": "shopify_tax_title_parse",
+    "_comment": "Attempts to extract state/province from Shopify tax title (e.g., 'WA State Tax' → WA)"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "shopify-qbo",
+  "description": "One-way sync pipeline from Shopify to QuickBooks Online. Exports customers, orders, and tax data via MCP servers with intelligent orchestration, field mapping, and tax reconciliation.",
+  "author": {
+    "name": "rwaugh"
+  },
+  "category": "integrations",
+  "source": {
+    "source": "url",
+    "url": "https://github.com/rwaugh/ShopifyQuickbooksBridge"
+  }
+}
