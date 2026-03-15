@@ -167,6 +167,7 @@ class TestTransformDiscount(unittest.TestCase):
     def test_positive_discount(self):
         result = transform_discount(Decimal("5.00"))
         self.assertIsNotNone(result)
+        assert result is not None
         self.assertEqual(result["DetailType"], "DiscountLineDetail")
         self.assertEqual(result["Amount"], 5.0)
         self.assertFalse(result["DiscountLineDetail"]["PercentBased"])

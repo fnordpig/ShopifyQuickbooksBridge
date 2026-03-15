@@ -37,6 +37,7 @@ class TestTransformAddress(unittest.TestCase):
             "country": "United States",
         }
         result = transform_address(shopify_addr)
+        assert result is not None
         self.assertEqual(result["Line1"], "123 Main St")
         self.assertEqual(result["Line2"], "Suite 4")
         self.assertEqual(result["City"], "Seattle")
@@ -47,25 +48,30 @@ class TestTransformAddress(unittest.TestCase):
     def test_prefers_province_code_over_province(self):
         addr = {"provinceCode": "WA", "province": "Washington"}
         result = transform_address(addr)
+        assert result is not None
         self.assertEqual(result["CountrySubDivisionCode"], "WA")
 
     def test_falls_back_to_province_when_no_province_code(self):
         addr = {"province": "Washington"}
         result = transform_address(addr)
+        assert result is not None
         self.assertEqual(result["CountrySubDivisionCode"], "Washington")
 
     def test_prefers_country_code_v2_over_country(self):
         addr = {"countryCodeV2": "US", "country": "United States"}
         result = transform_address(addr)
+        assert result is not None
         self.assertEqual(result["Country"], "US")
 
     def test_falls_back_to_country_when_no_code_v2(self):
         addr = {"country": "United States"}
         result = transform_address(addr)
+        assert result is not None
         self.assertEqual(result["Country"], "United States")
 
     def test_missing_fields_default_to_empty_string(self):
         result = transform_address({"address1": "123 Main"})
+        assert result is not None
         self.assertEqual(result["Line2"], "")
         self.assertEqual(result["City"], "")
         self.assertEqual(result["PostalCode"], "")
