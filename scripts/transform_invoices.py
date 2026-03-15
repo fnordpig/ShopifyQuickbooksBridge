@@ -191,7 +191,7 @@ def transform_order(order: dict, tax_map: dict) -> dict:
         "TxnDate": txn_date,
         "Line": lines,
         "TxnTaxDetail": tax_detail,
-        "PrivateNote": f"Imported from Shopify order {order.get('name', '')}",
+        "PrivateNote": f"[shopify-sync:{order.get('id', '')}] Imported from Shopify order {order.get('name', '')} on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
         "_shopify_order_id": order.get("id", ""),
         "_shopify_order_name": order.get("name", ""),
         "_customer_email": customer_email,

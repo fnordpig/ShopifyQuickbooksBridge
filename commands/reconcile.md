@@ -1,6 +1,6 @@
 ---
-description: "Run tax reconciliation between Shopify and QBO. Compares tax totals, flags discrepancies, and generates an audit report with action items."
+description: "Deep record-by-record consistency check between Shopify and QBO. Compares every synced order field-by-field and offers to fix issues."
 argument-hint: "[--date-range START END] [--threshold 0.01]"
 ---
 
-Use the `shopify-qbo:reconcile` skill to validate tax data and generate reconciliation reports.
+Use the `shopify-qbo:reconcile` skill to run a deep consistency audit across both systems.

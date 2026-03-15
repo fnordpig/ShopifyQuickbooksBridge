@@ -7,7 +7,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-from datetime import datetime
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
@@ -175,6 +175,16 @@ class TestTransformCustomer(unittest.TestCase):
         self.assertEqual(result["_shopify_id"], "gid://shopify/Customer/1001")
         self.assertEqual(result["_shopify_email"], "jane@example.com")
         self.assertIn("_sync_timestamp", result)
+
+    def test_private_note_contains_provenance_tag(self):
+        result = transform_customer(self._make_customer())
+        self.assertIn("PrivateNote", result)
+        self.assertIn("[shopify-sync:gid://shopify/Customer/1001]", result["PrivateNote"])
+
+    def test_private_note_contains_imported_on_date(self):
+        result = transform_customer(self._make_customer())
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        self.assertIn(f"Imported on {today}", result["PrivateNote"])
 
 
 class TestDeduplicateDisplayNames(unittest.TestCase):

@@ -75,6 +75,9 @@ If `--dry-run` was specified, stop here and show what would be loaded.
 2. If exists and identical -> skip
 3. If exists and changed -> update
 4. If not exists -> create via QBO MCP `create_customer`
+   - **Include the PrivateNote field** from the transformed JSON. It contains the
+     `[shopify-sync:<shopify-gid>]` provenance tag that lookup, reconcile,
+     resolve-customers, report, and undo commands depend on.
 
 **Invoice creation loop** (for each invoice in qbo_invoices.json):
 1. Query QBO: `SELECT Id, DocNumber FROM Invoice WHERE DocNumber = '<doc_number>'`
@@ -82,6 +85,8 @@ If `--dry-run` was specified, stop here and show what would be loaded.
 3. If not exists:
    - Resolve CustomerRef by email lookup
    - Create via QBO MCP `create_invoice` (draft mode)
+   - **Include the PrivateNote field** with the `[shopify-sync:<shopify-gid>]` tag
+     and import timestamp. This is the audit trail for all downstream commands.
    - Log the created QBO Invoice ID
 
 **Error handling during load:**

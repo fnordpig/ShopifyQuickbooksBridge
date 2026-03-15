@@ -75,6 +75,7 @@ def transform_customer(shopify_customer: dict) -> dict:
         "_shopify_id": shopify_id,
         "_shopify_email": email,
         "_sync_timestamp": datetime.now(timezone.utc).isoformat(),
+        "PrivateNote": f"[shopify-sync:{shopify_id}] Imported on {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
     }
     
     if email:

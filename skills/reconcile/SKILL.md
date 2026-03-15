@@ -1,94 +1,102 @@
 ---
 name: reconcile
 description: >
-  Tax reconciliation and audit between Shopify and QuickBooks Online.
-  Compares tax totals, validates field mappings, flags discrepancies, and generates
-  detailed audit reports with action items. Use when the user says "reconcile",
-  "check taxes", "audit sync", "compare totals", "validate tax mapping",
-  "review discrepancies", or wants to verify data integrity after a sync.
+  Deep record-by-record consistency check between Shopify and QuickBooks Online.
+  Compares every synced order field-by-field, identifies missing records, orphaned
+  invoices, and data mismatches. Offers to batch-fix issues. Use when the user says
+  "reconcile", "audit sync", "check consistency", "validate data", "compare records",
+  "verify sync", or wants a thorough integrity check between the systems.
+  Distinct from /shopify-qbo:report reconciliation which only compares totals.
 ---
 
-# Tax Reconciliation & Audit
+# Deep Record-by-Record Reconciliation
 
-Compare Shopify and QBO data to identify and resolve discrepancies.
+Walk every synced record and compare field-by-field between Shopify and QBO.
 
-## Quick Reconciliation
+## Step 1: Pull All Synced Records
 
-For a quick check after a sync, read the most recent audit report:
+**QBO invoices:**
+```
+SELECT Id, DocNumber, TxnDate, TotalAmt, Balance, CustomerRef, TxnTaxDetail, Line, PrivateNote
+FROM Invoice WHERE DocNumber LIKE 'SH-%'
+```
+
+**QBO customers (synced):**
+```
+SELECT Id, DisplayName, PrimaryEmailAddr, GivenName, FamilyName, PrimaryPhone, BillAddr, Notes, PrivateNote
+FROM Customer WHERE PrivateNote LIKE '%shopify-sync%'
+```
+
+**Shopify orders:**
+Use `get-orders` with pagination to fetch all orders.
+
+**Shopify customers:**
+Use `get-customers` with pagination to fetch all customers.
+
+Save all raw data to temp JSON files.
+
+## Step 2: Run Diff Script on Each Pair
+
+For each QBO invoice with DocNumber `SH-{number}`, find the matching Shopify order
+by order number. For each pair, run:
 
 ```bash
-ls -t sync_output/sync_audit_*.json | head -1
+python ${CLAUDE_PLUGIN_ROOT}/scripts/diff_records.py \
+  --type invoice \
+  --shopify /tmp/shopify_order_{number}.json \
+  --qbo /tmp/qbo_invoice_{number}.json \
+  --tax-map ${CLAUDE_PLUGIN_ROOT}/tax-mapping.json
 ```
 
-Review the `validate` section for issues.
+Collect all results. Also identify:
+- **Shopify orders missing from QBO** — orders with no matching `SH-{number}` invoice
+- **Orphaned QBO invoices** — invoices with `[shopify-sync]` PrivateNote but no matching Shopify order
 
-## Deep Reconciliation
+## Step 3: Present Summary
 
-### Step 1: Pull Current QBO State
-
-Query QBO for all synced invoices:
 ```
-SELECT Id, DocNumber, TotalAmt, TxnTaxDetail FROM Invoice WHERE DocNumber LIKE 'SH-%'
-```
+Reconciliation — March 2026: 140 invoices checked
 
-### Step 2: Pull Matching Shopify Orders
+✓ 136 fully consistent
+✗ 4 with issues:
 
-For each QBO invoice, extract the order number from DocNumber (strip "SH-" prefix)
-and fetch the corresponding Shopify order via MCP.
+  #1042  Tax: Shopify 6.5% ($7.80) vs QBO 0% ($0.00)
+  #1087  Missing from QBO entirely
+  #1103  Customer: Shopify "Jane Smith" vs QBO "J. Smith"
+  #1118  Line item count: Shopify 3 items vs QBO 2 items
 
-### Step 3: Compare
-
-For each order/invoice pair:
-- Compare line item counts
-- Compare subtotals
-- Compare tax amounts (tolerance: $0.01)
-- Compare customer references
-
-### Step 4: Generate Report
-
-Run the orchestrator's validation:
-```bash
-python ${CLAUDE_PLUGIN_ROOT}/scripts/orchestrator.py \
-  --shopify-customers shopify_customers.json \
-  --shopify-orders shopify_orders.json \
-  --tax-map ${CLAUDE_PLUGIN_ROOT}/tax-mapping.json \
-  --output-dir sync_output \
-  --mode transform-only
+Fix all 4? (Each will be proposed individually for confirmation)
 ```
 
-Review the audit report's `validate.summary` section:
-- `total_tax_mapped` vs `total_shopify_tax_original`
-- `tax_discrepancy` (should be $0.00)
-- `orphan_invoice_count` (should be 0)
+In environments supporting artifacts, generate an HTML dashboard showing the
+reconciliation results with color-coded status indicators.
 
-### Step 5: QBO Financial Reports
+## Step 4: Batch Fix (Optional)
 
-For broader validation, pull QBO reports:
-
-**Profit & Loss:**
-Use QBO MCP `profit_and_loss` tool with the relevant date range.
-
-**Tax Summary:**
-Query: `SELECT Id, Name, RateValue FROM TaxRate`
-
-Compare QBO tax rates against `tax-mapping.json` to ensure mappings are correct.
+If the user wants to fix issues:
+1. Process each issue one at a time using the same flow as `/shopify-qbo:fix`
+2. For missing records, suggest running `/shopify-qbo:sync`
+3. For orphaned records, suggest `/shopify-qbo:delete`
+4. For data mismatches, propose the specific correction
+5. **Confirm each fix individually** before executing
 
 ## Common Discrepancy Causes
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| Tax total mismatch | Rounding differences between Shopify decimals and QBO percentages | Usually < $0.01, acceptable |
-| Missing invoices | Orders filtered by status during transform | Re-run with `--status-filter all` |
+| Tax total mismatch | Rounding between Shopify decimals and QBO percentages | Usually < $0.01, acceptable |
+| Missing invoices | Orders filtered by status during transform | Re-run sync with `--status-filter all` |
 | Wrong tax code | Unmapped Shopify tax title defaulted to "TAX" | Add mapping to `tax-mapping.json` |
-| Orphan invoices | Customer in order not in customer export | Customer may already exist in QBO, or is a guest checkout |
-| Duplicate DocNumber | Same order synced twice | Delete duplicate in QBO, investigate trigger |
+| Orphan invoices | Shopify order deleted or customer removed | Review and delete from QBO if appropriate |
+| Duplicate DocNumber | Same order synced twice | Delete duplicate via `/shopify-qbo:delete` |
+| Customer name drift | Customer updated in Shopify after sync | Fix via `/shopify-qbo:resolve-customers` |
 
 ## Tax Mapping Audit
 
 To verify tax mappings are correct for the user's jurisdiction:
 
 1. Query Shopify for unique tax titles across all orders
-2. Query QBO for available TaxRate entities
-3. Compare against `tax-mapping.json`
+2. Query QBO: `SELECT Id, Name, RateValue FROM TaxRate`
+3. Compare against `${CLAUDE_PLUGIN_ROOT}/tax-mapping.json`
 4. Flag any Shopify tax titles not explicitly mapped (using defaults)
 5. Suggest additions to `tax-mapping.json`
