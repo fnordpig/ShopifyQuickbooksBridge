@@ -285,7 +285,14 @@ class TestTransformOrder(unittest.TestCase):
 
     def test_private_note(self):
         result = transform_order(self._make_order(), TAX_MAP)
-        self.assertEqual(result["PrivateNote"], "Imported from Shopify order #1001")
+        self.assertIn("[shopify-sync:gid://shopify/Order/5001]", result["PrivateNote"])
+        self.assertIn("Imported from Shopify order #1001", result["PrivateNote"])
+
+    def test_private_note_contains_date(self):
+        from datetime import datetime, timezone
+        result = transform_order(self._make_order(), TAX_MAP)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        self.assertIn(f"on {today}", result["PrivateNote"])
 
     def test_customer_lookup_by_email(self):
         result = transform_order(self._make_order(), TAX_MAP)
