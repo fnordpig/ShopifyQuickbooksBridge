@@ -72,6 +72,11 @@ with proposed reversal actions.
 
 ## Step 3: Present the Reversal Plan
 
+**Visual confirmation:** Since reversal modifies or deletes records, present the
+confirmation in a clear, visually distinct way in chat. Use **bold** for record
+details, indent the plan as a blockquote, and end with a prominent **YES/NO**
+prompt. No HTML artifact is needed for this simple confirm/execute flow.
+
 Show what will be reversed:
 
 > **Reversal plan for "undo last sync":**

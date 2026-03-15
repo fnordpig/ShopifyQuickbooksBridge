@@ -88,7 +88,48 @@ QBO only:            5
 Total issues:        6 (excluding QBO-only)
 ```
 
-### Step 4: Resolve One at a Time
+### Step 4: Generate HTML Customer Issues Dashboard
+
+After presenting the markdown tables, generate a self-contained HTML dashboard
+showing all customer issues categorized by severity. Write the file to
+`/tmp/shopify-qbo-resolve-customers.html` and open it.
+
+The HTML should include:
+
+- A header with "Shopify ↔ QBO Customer Issues" branding
+- A summary header bar with counts:
+  - Total issues found
+  - Breakdown by severity with color-coded badges
+- Issues grouped into severity categories:
+  - **High (Red #dc3545)**: Missing from QBO, Duplicate email — these block sync
+  - **Medium (Yellow #ffc107)**: Data mismatch — stale but not blocking
+  - **Low (Gray #6c757d)**: Orphaned in QBO, QBO-only — informational
+- Each category as a collapsible section with a table of issues
+- Each issue row includes: customer name, email, issue description, and suggested action
+- A "QBO Only" section at the bottom (dimmed, since these are informational)
+- Self-contained inline CSS, no external dependencies
+
+Style guide:
+- Page background: `#f8f9fa`
+- Cards: white with `box-shadow: 0 2px 4px rgba(0,0,0,0.1)`
+- Font: `system-ui, -apple-system, sans-serif`
+- High severity section: border-left `4px solid #dc3545`, header background `#f8d7da`
+- Medium severity section: border-left `4px solid #ffc107`, header background `#fff3cd`
+- Low severity section: border-left `4px solid #6c757d`, header background `#e9ecef`
+- Summary badges: pill-shaped with severity color background and white text
+
+```bash
+# Claude generates the HTML content inline based on the scan results
+cat > /tmp/shopify-qbo-resolve-customers.html << 'HTMLEOF'
+<!-- Claude generates this dynamically based on actual scan data -->
+HTMLEOF
+open /tmp/shopify-qbo-resolve-customers.html
+```
+
+The markdown tables in chat are still the primary output. The HTML dashboard gives
+the bookkeeper a comprehensive visual overview of all customer issues at a glance.
+
+### Step 5: Resolve One at a Time
 
 Work through issues in priority order:
 1. Missing from QBO (blocking for invoice sync)

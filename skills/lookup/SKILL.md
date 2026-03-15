@@ -94,7 +94,44 @@ The script outputs a structured comparison with match status and field diffs.
 | Customer | Jane Doe | Jane Doe | ✓ |
 | Line items | 3 | 3 | ✓ |
 
-## Step 5: Suggest Next Actions
+## Step 5: Generate HTML Comparison View
+
+After presenting the markdown table, generate a self-contained HTML file showing the
+two records side-by-side with color-coded match/mismatch fields. Write the file to
+`/tmp/shopify-qbo-lookup.html` and open it.
+
+The HTML should include:
+
+- A header with "Shopify ↔ QBO Lookup" branding and the search query
+- A two-column comparison card (Shopify on the left, QBO on the right)
+- Each field row color-coded:
+  - **Green (#28a745)** background for matching fields
+  - **Red (#dc3545)** background for mismatched fields
+  - **Gray (#6c757d)** background for fields present in only one system
+- A summary banner at the top showing total fields, matches, and mismatches
+- Self-contained inline CSS, no external dependencies
+
+Style guide:
+- Page background: `#f8f9fa`
+- Cards: white with `box-shadow: 0 2px 4px rgba(0,0,0,0.1)`
+- Font: `system-ui, -apple-system, sans-serif`
+- Match/OK rows: light green `#d4edda` with border-left `4px solid #28a745`
+- Mismatch rows: light red `#f8d7da` with border-left `4px solid #dc3545`
+- Missing rows: light gray `#e9ecef` with border-left `4px solid #6c757d`
+
+```bash
+# Claude generates the HTML content inline based on the comparison results
+# Write it to file and open it
+cat > /tmp/shopify-qbo-lookup.html << 'HTMLEOF'
+<!-- Claude generates this dynamically based on actual comparison data -->
+HTMLEOF
+open /tmp/shopify-qbo-lookup.html
+```
+
+The markdown table in chat is still the primary output. The HTML view is an additional
+visual aid for the bookkeeper.
+
+## Step 6: Suggest Next Actions
 
 Based on the results, suggest relevant commands:
 

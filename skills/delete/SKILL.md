@@ -91,6 +91,11 @@ Proceed with inactivation? (yes/no)
 
 ## Step 4: Present What Will Be Deleted
 
+**Visual confirmation:** Since deletion is destructive, present the confirmation
+in a clear, visually distinct way in chat. Use **bold** for the record details,
+indent the summary as a blockquote, and end with a prominent **YES/NO** prompt.
+No HTML artifact is needed for this simple confirm/execute flow.
+
 If safety checks pass, present a clear summary:
 
 > **Proposed deletion:**

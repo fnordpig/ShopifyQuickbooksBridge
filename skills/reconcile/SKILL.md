@@ -68,10 +68,50 @@ Reconciliation — March 2026: 140 invoices checked
 Fix all 4? (Each will be proposed individually for confirmation)
 ```
 
-In environments supporting artifacts, generate an HTML dashboard showing the
-reconciliation results with color-coded status indicators.
+## Step 4: Generate HTML Reconciliation Dashboard
 
-## Step 4: Batch Fix (Optional)
+After presenting the markdown summary, generate a self-contained HTML dashboard.
+Write the file to `/tmp/shopify-qbo-reconcile.html` and open it.
+
+The HTML should include:
+
+- A header with "Shopify ↔ QBO Reconciliation" branding and the date range
+- A summary banner showing:
+  - Total records checked
+  - Count of fully consistent records (green badge)
+  - Count of records with issues (red badge)
+  - Percentage consistent
+- A full table of all reconciled records:
+  - **Green (#28a745)** row background (`#d4edda`) for consistent records
+  - **Red (#dc3545)** row background (`#f8d7da`) for records with issues
+- Issue rows are expandable (use HTML `<details>/<summary>`) to reveal field-level
+  detail showing which specific fields differ and their Shopify vs QBO values
+- A separate section for missing records (Shopify orders not in QBO) and orphaned
+  records (QBO invoices not in Shopify)
+- Self-contained inline CSS and vanilla JS for expand/collapse, no external dependencies
+
+Style guide:
+- Page background: `#f8f9fa`
+- Cards: white with `box-shadow: 0 2px 4px rgba(0,0,0,0.1)`
+- Font: `system-ui, -apple-system, sans-serif`
+- Consistent rows: `background: #d4edda` with left border `4px solid #28a745`
+- Issue rows: `background: #f8d7da` with left border `4px solid #dc3545`
+- Missing records: `background: #fff3cd` with left border `4px solid #ffc107`
+- Orphaned records: `background: #e9ecef` with left border `4px solid #6c757d`
+- Summary banner: large font with pill-shaped count badges
+
+```bash
+# Claude generates the HTML content inline based on the reconciliation results
+cat > /tmp/shopify-qbo-reconcile.html << 'HTMLEOF'
+<!-- Claude generates this dynamically based on actual reconciliation data -->
+HTMLEOF
+open /tmp/shopify-qbo-reconcile.html
+```
+
+The markdown summary in chat is still the primary output. The HTML dashboard gives
+the bookkeeper an interactive, detailed view of all reconciliation results.
+
+## Step 5: Batch Fix (Optional)
 
 If the user wants to fix issues:
 1. Process each issue one at a time using the same flow as `/shopify-qbo:fix`

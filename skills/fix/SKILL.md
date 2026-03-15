@@ -89,7 +89,41 @@ Show a clear table of what's wrong:
 If no discrepancies are found, tell the user: "Records are already in sync —
 no fixes needed."
 
-## Step 5: Propose Fix (Require Confirmation)
+## Step 5: Generate HTML Diff View
+
+After presenting the markdown discrepancy table, generate a self-contained HTML file
+showing the diff visually. Write the file to `/tmp/shopify-qbo-fix.html` and open it.
+
+The HTML should include:
+
+- A header with "Shopify ↔ QBO Fix" branding and the record identifier (e.g., "Invoice SH-1042")
+- A diff card for each field that will change, showing:
+  - **Red (#dc3545)** strikethrough for the current (incorrect) QBO value
+  - **Green (#28a745)** highlight for the new (correct) value from Shopify
+- A summary banner: "X fields to update on [record type] [record id]"
+- Fields that already match shown in a collapsed "OK" section with green checkmarks
+- Self-contained inline CSS, no external dependencies
+
+Style guide:
+- Page background: `#f8f9fa`
+- Cards: white with `box-shadow: 0 2px 4px rgba(0,0,0,0.1)`
+- Font: `system-ui, -apple-system, sans-serif`
+- Current (wrong) value: `background: #f8d7da; text-decoration: line-through; color: #dc3545`
+- New (correct) value: `background: #d4edda; color: #28a745; font-weight: bold`
+- Matching fields: light green `#d4edda` with checkmark
+
+```bash
+# Claude generates the HTML content inline based on the diff results
+cat > /tmp/shopify-qbo-fix.html << 'HTMLEOF'
+<!-- Claude generates this dynamically based on actual diff data -->
+HTMLEOF
+open /tmp/shopify-qbo-fix.html
+```
+
+The markdown table in chat is still the primary output. The HTML view gives the
+bookkeeper a clear visual of exactly what will change before they confirm.
+
+## Step 6: Propose Fix (Require Confirmation)
 
 Present the proposed changes in plain English:
 
@@ -103,7 +137,7 @@ Present the proposed changes in plain English:
 
 **Do NOT execute any writes until the user confirms.**
 
-## Step 6: Execute the Fix
+## Step 7: Execute the Fix
 
 After confirmation, apply changes via QBO MCP:
 
@@ -122,7 +156,7 @@ Append a fix log entry:
 
 Preserve any existing `[shopify-sync:gid]` tag in the PrivateNote.
 
-## Step 7: Verify and Report
+## Step 8: Verify and Report
 
 After the update, re-fetch the QBO record and confirm the fix was applied:
 
