@@ -63,6 +63,10 @@ python scripts/orchestrator.py --shopify-customers shopify_customers.json --shop
 python3 -m unittest tests/test_transform_customers tests/test_transform_invoices tests/test_orchestrator -v
 ```
 
+## Python Tooling
+
+When working with Python, invoke the relevant `/astral:<skill>` for uv, ty, and ruff to ensure best practices are followed.
+
 ## Dependencies
 
 Python 3.10+ (stdlib only, no pip packages). MCP servers require Node.js 18+.
