@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Shopify to QuickBooks Online sync and management. Sync customers, orders, and tax data; look up records across systems; fix discrepancies; resolve customer mismatches; generate reports; and undo actions — all with propose-then-confirm safety.",
   "author": {
-    "name": "Ralph Waugh"
+    "name": "Robert Waugh"
   },
   "license": "MIT",
   "category": "integrations",
