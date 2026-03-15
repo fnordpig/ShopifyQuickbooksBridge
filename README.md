@@ -46,13 +46,35 @@ An agentic, MCP-intermediated pipeline for one-way sync of customers, invoices, 
 | `tax-mapping.json` | Configurable tax code mapping |
 | `agent-playbook.md` | Step-by-step MCP tool call reference |
 
-### Scripts (Transform Layer)
+### Scripts (Computation Layer)
 
 | Script | Purpose |
 |--------|---------|
 | `transform_customers.py` | Shopify customer JSON -> QBO customer JSON |
 | `transform_invoices.py` | Shopify order JSON -> QBO invoice JSON with tax |
 | `orchestrator.py` | Runs full transform + validate pipeline |
+| `utils.py` | Shared utilities: PrivateNote parsing, field normalization |
+| `lookup_records.py` | Cross-system record comparison |
+| `diff_records.py` | Expected state computation + field-by-field diff |
+| `scan_customers.py` | Customer mismatch detection across systems |
+| `generate_report.py` | Report generation (4 types) with optional HTML artifacts |
+| `find_undo_targets.py` | PrivateNote history search for undo operations |
+
+### Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/shopify-qbo:setup` | Interactive onboarding and MCP configuration |
+| `/shopify-qbo:configure` | Credentials, token rotation, sandbox/prod |
+| `/shopify-qbo:sync` | Four-phase sync pipeline (extract → transform → load → validate) |
+| `/shopify-qbo:status` | MCP connection health check |
+| `/shopify-qbo:lookup` | Cross-system customer/order search with side-by-side comparison |
+| `/shopify-qbo:fix` | Investigate and propose corrections for data mismatches |
+| `/shopify-qbo:delete` | Guided record deletion with safety checks |
+| `/shopify-qbo:resolve-customers` | Find and fix customer mismatches between systems |
+| `/shopify-qbo:reconcile` | Deep record-by-record consistency check |
+| `/shopify-qbo:report` | Reports: sync-status, financial, reconciliation, tax |
+| `/shopify-qbo:undo` | Reverse recent actions using PrivateNote history |
 
 ## Quick Start
 
