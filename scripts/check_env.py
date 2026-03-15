@@ -14,7 +14,6 @@ Exit code 0 if all required checks pass, 1 otherwise.
 """
 
 import json
-import os
 import re
 import subprocess
 import sys
@@ -149,7 +148,6 @@ def main():
     print("=" * 50)
 
     for check in checks:
-        status = "PASS" if check["passed"] else "FAIL"
         icon = "+" if check["passed"] else "x"
         version = check["found"] or "not found"
         print(f"  [{icon}] {check['name']:<12} {version:<20} (requires {check['required']})")

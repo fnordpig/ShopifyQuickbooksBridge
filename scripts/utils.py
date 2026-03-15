@@ -146,14 +146,14 @@ def normalize_shopify_order(order: dict) -> dict:
 def normalize_qbo_invoice(invoice: dict) -> dict:
     """Normalize QBO invoice to comparable fields."""
     lines = invoice.get("Line", [])
-    sales_lines = [l for l in lines if l.get("DetailType") == "SalesItemLineDetail"]
-    discount_lines = [l for l in lines if l.get("DetailType") == "DiscountLineDetail"]
-    shipping_lines = [l for l in sales_lines if "Shipping" in (l.get("Description") or "")]
-    product_lines = [l for l in sales_lines if "Shipping" not in (l.get("Description") or "")]
+    sales_lines = [line for line in lines if line.get("DetailType") == "SalesItemLineDetail"]
+    discount_lines = [line for line in lines if line.get("DetailType") == "DiscountLineDetail"]
+    shipping_lines = [line for line in sales_lines if "Shipping" in (line.get("Description") or "")]
+    product_lines = [line for line in sales_lines if "Shipping" not in (line.get("Description") or "")]
 
-    subtotal = sum((Decimal(str(l["Amount"])) for l in product_lines), Decimal("0")).quantize(Decimal("0.01"))
-    shipping = sum((Decimal(str(l["Amount"])) for l in shipping_lines), Decimal("0")).quantize(Decimal("0.01"))
-    discount = sum((Decimal(str(l["Amount"])) for l in discount_lines), Decimal("0")).quantize(Decimal("0.01"))
+    subtotal = sum((Decimal(str(line["Amount"])) for line in product_lines), Decimal("0")).quantize(Decimal("0.01"))
+    shipping = sum((Decimal(str(line["Amount"])) for line in shipping_lines), Decimal("0")).quantize(Decimal("0.01"))
+    discount = sum((Decimal(str(line["Amount"])) for line in discount_lines), Decimal("0")).quantize(Decimal("0.01"))
 
     tax_detail = invoice.get("TxnTaxDetail", {}) or {}
     tax_total = Decimal(str(tax_detail.get("TotalTax", 0))).quantize(Decimal("0.01"))
@@ -164,10 +164,10 @@ def normalize_qbo_invoice(invoice: dict) -> dict:
         tax_rate = str(tl_detail.get("TaxPercent", ""))
 
     items = []
-    for l in product_lines:
-        detail = l.get("SalesItemLineDetail", {})
+    for line in product_lines:
+        detail = line.get("SalesItemLineDetail", {})
         items.append({
-            "title": l.get("Description", ""),
+            "title": line.get("Description", ""),
             "quantity": int(detail.get("Qty", 1)),
             "unit_price": str(detail.get("UnitPrice", "0")),
         })

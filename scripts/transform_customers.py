@@ -11,7 +11,6 @@ Output: JSON array of QBO-ready customer objects
 
 import argparse
 import json
-import sys
 from datetime import datetime, timezone
 from typing import Any
 

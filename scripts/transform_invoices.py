@@ -12,7 +12,6 @@ Output: JSON array of QBO-ready invoice objects
 import argparse
 import json
 import re
-import sys
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
@@ -270,14 +269,14 @@ def main():
         "filtered_out": filtered_count,
         "total_output": len(qbo_invoices),
         "total_line_items": sum(
-            len([l for l in inv["Line"] if l["DetailType"] == "SalesItemLineDetail"])
+            len([line for line in inv["Line"] if line["DetailType"] == "SalesItemLineDetail"])
             for inv in qbo_invoices
         ),
         "total_tax": float(total_tax),
         "total_revenue": float(total_revenue),
         "orders_with_discounts": sum(
             1 for inv in qbo_invoices
-            if any(l["DetailType"] == "DiscountLineDetail" for l in inv["Line"])
+            if any(line["DetailType"] == "DiscountLineDetail" for line in inv["Line"])
         ),
         "orders_missing_customer_email": sum(
             1 for inv in qbo_invoices if not inv.get("_customer_email")

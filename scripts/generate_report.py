@@ -16,7 +16,7 @@ import sys
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
-from utils import format_currency, parse_private_note
+from utils import format_currency
 
 
 def generate_sync_status_report(shopify_orders: list[dict], qbo_invoices: list[dict]) -> dict:

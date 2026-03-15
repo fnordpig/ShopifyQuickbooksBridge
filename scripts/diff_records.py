@@ -9,13 +9,10 @@ Usage:
 
 import argparse
 import json
-import re
 import sys
 from datetime import datetime, timezone
-from typing import Any
 
 from utils import (
-    normalize_qbo_customer,
     parse_private_note,
 )
 from transform_customers import transform_customer
@@ -150,8 +147,8 @@ def _diff_invoice_lines(expected: dict, actual: dict) -> list[dict]:
         diffs.append({"field": "TxnDate", "expected": expected.get("TxnDate", ""), "actual": actual.get("TxnDate", "")})
 
     # Compare line items (count and amounts)
-    exp_sales = [l for l in expected.get("Line", []) if l.get("DetailType") == "SalesItemLineDetail"]
-    act_sales = [l for l in actual.get("Line", []) if l.get("DetailType") == "SalesItemLineDetail"]
+    exp_sales = [line for line in expected.get("Line", []) if line.get("DetailType") == "SalesItemLineDetail"]
+    act_sales = [line for line in actual.get("Line", []) if line.get("DetailType") == "SalesItemLineDetail"]
     if len(exp_sales) != len(act_sales):
         diffs.append({"field": "LineItemCount", "expected": str(len(exp_sales)), "actual": str(len(act_sales))})
 
@@ -179,10 +176,10 @@ def _diff_invoice_lines(expected: dict, actual: dict) -> list[dict]:
         diffs.append({"field": "TotalTax", "expected": str(exp_tax), "actual": str(act_tax)})
 
     # Compare discounts
-    exp_disc = [l for l in expected.get("Line", []) if l.get("DetailType") == "DiscountLineDetail"]
-    act_disc = [l for l in actual.get("Line", []) if l.get("DetailType") == "DiscountLineDetail"]
-    exp_disc_total = sum(float(l.get("Amount", 0)) for l in exp_disc)
-    act_disc_total = sum(float(l.get("Amount", 0)) for l in act_disc)
+    exp_disc = [line for line in expected.get("Line", []) if line.get("DetailType") == "DiscountLineDetail"]
+    act_disc = [line for line in actual.get("Line", []) if line.get("DetailType") == "DiscountLineDetail"]
+    exp_disc_total = sum(float(line.get("Amount", 0)) for line in exp_disc)
+    act_disc_total = sum(float(line.get("Amount", 0)) for line in act_disc)
     if abs(exp_disc_total - act_disc_total) > 0.01:
         diffs.append({"field": "DiscountTotal", "expected": str(exp_disc_total), "actual": str(act_disc_total)})
 

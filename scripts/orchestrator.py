@@ -33,7 +33,6 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 
 def run_transform_customers(input_path: str, output_path: str) -> dict:
@@ -275,14 +274,14 @@ def main():
     print(f"  Total tax mapped:       ${validation['summary']['total_tax_mapped']:.2f}")
     print(f"  Tax discrepancy:        ${validation['summary']['tax_discrepancy']:.2f}")
     print(f"  Validation:             {'PASS' if validation['valid'] else 'ISSUES FOUND'}")
-    print(f"\n  Output files:")
+    print("\n  Output files:")
     print(f"    {customer_output}")
     print(f"    {invoice_output}")
     print(f"    {report_path}")
     
     if args.mode == "transform-only":
-        print(f"\n  Mode: transform-only — QBO load deferred to agent")
-        print(f"  Next step: Agent uses QBO MCP to upsert customers, then create invoices")
+        print("\n  Mode: transform-only — QBO load deferred to agent")
+        print("  Next step: Agent uses QBO MCP to upsert customers, then create invoices")
     
     print("=" * 60)
 

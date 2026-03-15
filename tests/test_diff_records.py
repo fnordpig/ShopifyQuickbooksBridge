@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 """Tests for diff_records.py"""
 
-import json
 import os
 import sys
-import tempfile
 import unittest
-from unittest.mock import patch
-from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 

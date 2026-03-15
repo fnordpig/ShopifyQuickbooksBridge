@@ -255,28 +255,28 @@ class TestTransformOrder(unittest.TestCase):
 
     def test_line_items_transformed(self):
         result = transform_order(self._make_order(), TAX_MAP)
-        sales_lines = [l for l in result["Line"] if l["DetailType"] == "SalesItemLineDetail"]
+        sales_lines = [line for line in result["Line"] if line["DetailType"] == "SalesItemLineDetail"]
         # 1 product line + 1 shipping line
         self.assertEqual(len(sales_lines), 2)
 
     def test_shipping_line_included(self):
         result = transform_order(self._make_order(), TAX_MAP)
         shipping_lines = [
-            l for l in result["Line"]
-            if l.get("Description", "").startswith("Shipping:")
+            line for line in result["Line"]
+            if line.get("Description", "").startswith("Shipping:")
         ]
         self.assertEqual(len(shipping_lines), 1)
         self.assertEqual(shipping_lines[0]["Amount"], 9.99)
 
     def test_discount_line_included(self):
         result = transform_order(self._make_order(), TAX_MAP)
-        discount_lines = [l for l in result["Line"] if l["DetailType"] == "DiscountLineDetail"]
+        discount_lines = [line for line in result["Line"] if line["DetailType"] == "DiscountLineDetail"]
         self.assertEqual(len(discount_lines), 1)
         self.assertEqual(discount_lines[0]["Amount"], 5.0)
 
     def test_no_discount_when_zero(self):
         result = transform_order(self._make_order(totalDiscounts="0"), TAX_MAP)
-        discount_lines = [l for l in result["Line"] if l["DetailType"] == "DiscountLineDetail"]
+        discount_lines = [line for line in result["Line"] if line["DetailType"] == "DiscountLineDetail"]
         self.assertEqual(len(discount_lines), 0)
 
     def test_tax_detail_present(self):
@@ -321,7 +321,7 @@ class TestTransformOrder(unittest.TestCase):
             }}
         ])
         result = transform_order(order, TAX_MAP)
-        sales_lines = [l for l in result["Line"] if l["DetailType"] == "SalesItemLineDetail" and "Shipping" not in l.get("Description", "")]
+        sales_lines = [line for line in result["Line"] if line["DetailType"] == "SalesItemLineDetail" and "Shipping" not in line.get("Description", "")]
         self.assertEqual(sales_lines[0]["Description"], "Widget")
 
     def test_null_customer(self):
@@ -332,7 +332,7 @@ class TestTransformOrder(unittest.TestCase):
         order = self._make_order(totalDiscounts=None)
         order["totalDiscountsSet"] = {"shopMoney": {"amount": "7.50"}}
         result = transform_order(order, TAX_MAP)
-        discount_lines = [l for l in result["Line"] if l["DetailType"] == "DiscountLineDetail"]
+        discount_lines = [line for line in result["Line"] if line["DetailType"] == "DiscountLineDetail"]
         self.assertEqual(len(discount_lines), 1)
         self.assertEqual(discount_lines[0]["Amount"], 7.5)
 

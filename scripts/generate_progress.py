@@ -12,8 +12,6 @@ Steps 0 = prerequisites, 1-5 = phases, 6 = all complete.
 """
 
 import argparse
-import json
-import sys
 
 PHASES = [
     {
