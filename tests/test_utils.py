@@ -134,14 +134,23 @@ class TestNormalizeShopifyOrder(unittest.TestCase):
         order = {
             "name": "#1001",
             "createdAt": "2026-03-14T10:00:00Z",
-            "customer": {"email": "jane@example.com", "firstName": "Jane", "lastName": "Smith"},
+            "customer": {
+                "email": "jane@example.com",
+                "firstName": "Jane",
+                "lastName": "Smith",
+            },
             "subtotalPrice": "59.98",
             "totalTax": "3.90",
             "totalPrice": "68.87",
             "totalDiscounts": "5.00",
             "taxLines": [{"title": "State Tax", "rate": "0.065", "price": "3.90"}],
             "lineItems": [
-                {"title": "Widget", "quantity": 2, "originalUnitPrice": "29.99", "taxLines": []},
+                {
+                    "title": "Widget",
+                    "quantity": 2,
+                    "originalUnitPrice": "29.99",
+                    "taxLines": [],
+                },
             ],
             "shippingLines": [{"title": "Standard", "price": "9.99"}],
         }
@@ -163,11 +172,17 @@ class TestNormalizeQboInvoice(unittest.TestCase):
             "TotalAmt": 68.87,
             "TxnTaxDetail": {"TotalTax": 3.90, "TaxLine": []},
             "Line": [
-                {"DetailType": "SalesItemLineDetail", "Amount": 59.98,
-                 "SalesItemLineDetail": {"Qty": 2, "UnitPrice": 29.99}},
-                {"DetailType": "SalesItemLineDetail", "Amount": 9.99,
-                 "Description": "Shipping: Standard",
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99}},
+                {
+                    "DetailType": "SalesItemLineDetail",
+                    "Amount": 59.98,
+                    "SalesItemLineDetail": {"Qty": 2, "UnitPrice": 29.99},
+                },
+                {
+                    "DetailType": "SalesItemLineDetail",
+                    "Amount": 9.99,
+                    "Description": "Shipping: Standard",
+                    "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99},
+                },
             ],
             "_customer_email": "jane@example.com",
             "_customer_name": "Jane Smith",

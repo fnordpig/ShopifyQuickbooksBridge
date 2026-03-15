@@ -27,7 +27,12 @@ TAX_MAP = {
         "CA": {"GST": "GST", "HST": "HST", "PST": "PST", "GST/HST": "HST"},
         "GB": {"VAT": "20.0% S"},
     },
-    "defaults": {"taxable": "TAX", "exempt": "NON", "shipping": "NON", "unknown": "TAX"},
+    "defaults": {
+        "taxable": "TAX",
+        "exempt": "NON",
+        "shipping": "NON",
+        "unknown": "TAX",
+    },
 }
 
 
@@ -138,7 +143,9 @@ class TestTransformLineItem(unittest.TestCase):
     def test_amount_rounded_to_two_decimals(self):
         item = self._make_item(originalUnitPrice="33.333", quantity=3)
         result = transform_line_item(item, TAX_MAP)
-        self.assertEqual(result["Amount"], 100.0)  # 33.333 * 3 = 99.999, rounded to 100.00
+        self.assertEqual(
+            result["Amount"], 100.0
+        )  # 33.333 * 3 = 99.999, rounded to 100.00
 
     def test_shopify_metadata_preserved(self):
         result = transform_line_item(self._make_item(), TAX_MAP)
@@ -148,7 +155,9 @@ class TestTransformLineItem(unittest.TestCase):
 
 class TestTransformShippingLine(unittest.TestCase):
     def test_basic_shipping(self):
-        result = transform_shipping_line({"title": "Standard Shipping", "price": "9.99"})
+        result = transform_shipping_line(
+            {"title": "Standard Shipping", "price": "9.99"}
+        )
         self.assertEqual(result["Amount"], 9.99)
         self.assertEqual(result["Description"], "Shipping: Standard Shipping")
         self.assertEqual(result["SalesItemLineDetail"]["TaxCodeRef"]["value"], "NON")
@@ -197,8 +206,12 @@ class TestTransformTaxDetail(unittest.TestCase):
         result = transform_tax_detail(tax_lines, TAX_MAP)
         self.assertEqual(result["TotalTax"], 6.0)
         self.assertEqual(len(result["TaxLine"]), 2)
-        self.assertEqual(result["TaxLine"][0]["TaxLineDetail"]["TaxRateRef"]["value"], "GST")
-        self.assertEqual(result["TaxLine"][1]["TaxLineDetail"]["TaxRateRef"]["value"], "PST")
+        self.assertEqual(
+            result["TaxLine"][0]["TaxLineDetail"]["TaxRateRef"]["value"], "GST"
+        )
+        self.assertEqual(
+            result["TaxLine"][1]["TaxLineDetail"]["TaxRateRef"]["value"], "PST"
+        )
 
     def test_empty_tax_lines(self):
         result = transform_tax_detail([], TAX_MAP)
@@ -232,7 +245,9 @@ class TestTransformOrder(unittest.TestCase):
                     "title": "Premium Widget",
                     "quantity": 2,
                     "originalUnitPrice": "29.99",
-                    "taxLines": [{"title": "State Tax", "rate": "0.065", "price": "3.90"}],
+                    "taxLines": [
+                        {"title": "State Tax", "rate": "0.065", "price": "3.90"}
+                    ],
                 }
             ],
             "shippingLines": [{"title": "Standard Shipping", "price": "9.99"}],
@@ -256,14 +271,19 @@ class TestTransformOrder(unittest.TestCase):
 
     def test_line_items_transformed(self):
         result = transform_order(self._make_order(), TAX_MAP)
-        sales_lines = [line for line in result["Line"] if line["DetailType"] == "SalesItemLineDetail"]
+        sales_lines = [
+            line
+            for line in result["Line"]
+            if line["DetailType"] == "SalesItemLineDetail"
+        ]
         # 1 product line + 1 shipping line
         self.assertEqual(len(sales_lines), 2)
 
     def test_shipping_line_included(self):
         result = transform_order(self._make_order(), TAX_MAP)
         shipping_lines = [
-            line for line in result["Line"]
+            line
+            for line in result["Line"]
             if line.get("Description", "").startswith("Shipping:")
         ]
         self.assertEqual(len(shipping_lines), 1)
@@ -271,13 +291,21 @@ class TestTransformOrder(unittest.TestCase):
 
     def test_discount_line_included(self):
         result = transform_order(self._make_order(), TAX_MAP)
-        discount_lines = [line for line in result["Line"] if line["DetailType"] == "DiscountLineDetail"]
+        discount_lines = [
+            line
+            for line in result["Line"]
+            if line["DetailType"] == "DiscountLineDetail"
+        ]
         self.assertEqual(len(discount_lines), 1)
         self.assertEqual(discount_lines[0]["Amount"], 5.0)
 
     def test_no_discount_when_zero(self):
         result = transform_order(self._make_order(totalDiscounts="0"), TAX_MAP)
-        discount_lines = [line for line in result["Line"] if line["DetailType"] == "DiscountLineDetail"]
+        discount_lines = [
+            line
+            for line in result["Line"]
+            if line["DetailType"] == "DiscountLineDetail"
+        ]
         self.assertEqual(len(discount_lines), 0)
 
     def test_tax_detail_present(self):
@@ -291,6 +319,7 @@ class TestTransformOrder(unittest.TestCase):
 
     def test_private_note_contains_date(self):
         from datetime import datetime, timezone
+
         result = transform_order(self._make_order(), TAX_MAP)
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         self.assertIn(f"on {today}", result["PrivateNote"])
@@ -313,16 +342,25 @@ class TestTransformOrder(unittest.TestCase):
         self.assertEqual(v["shopify_financial_status"], "paid")
 
     def test_handles_edges_nodes_format(self):
-        order = self._make_order(lineItems=[
-            {"node": {
-                "title": "Widget",
-                "quantity": 1,
-                "originalUnitPrice": "10.00",
-                "taxLines": [],
-            }}
-        ])
+        order = self._make_order(
+            lineItems=[
+                {
+                    "node": {
+                        "title": "Widget",
+                        "quantity": 1,
+                        "originalUnitPrice": "10.00",
+                        "taxLines": [],
+                    }
+                }
+            ]
+        )
         result = transform_order(order, TAX_MAP)
-        sales_lines = [line for line in result["Line"] if line["DetailType"] == "SalesItemLineDetail" and "Shipping" not in line.get("Description", "")]
+        sales_lines = [
+            line
+            for line in result["Line"]
+            if line["DetailType"] == "SalesItemLineDetail"
+            and "Shipping" not in line.get("Description", "")
+        ]
         self.assertEqual(sales_lines[0]["Description"], "Widget")
 
     def test_null_customer(self):
@@ -333,7 +371,11 @@ class TestTransformOrder(unittest.TestCase):
         order = self._make_order(totalDiscounts=None)
         order["totalDiscountsSet"] = {"shopMoney": {"amount": "7.50"}}
         result = transform_order(order, TAX_MAP)
-        discount_lines = [line for line in result["Line"] if line["DetailType"] == "DiscountLineDetail"]
+        discount_lines = [
+            line
+            for line in result["Line"]
+            if line["DetailType"] == "DiscountLineDetail"
+        ]
         self.assertEqual(len(discount_lines), 1)
         self.assertEqual(discount_lines[0]["Amount"], 7.5)
 
@@ -342,20 +384,46 @@ class TestMainCLI(unittest.TestCase):
     def test_end_to_end_with_status_filter(self):
         orders = [
             {
-                "id": "1", "name": "#1001", "createdAt": "2025-01-01T00:00:00Z",
+                "id": "1",
+                "name": "#1001",
+                "createdAt": "2025-01-01T00:00:00Z",
                 "customer": {"email": "a@x.com", "firstName": "A", "lastName": "B"},
-                "lineItems": [{"title": "X", "quantity": 1, "originalUnitPrice": "10.00", "taxLines": []}],
-                "shippingLines": [], "taxLines": [],
-                "totalDiscounts": "0", "totalPrice": "10.00", "totalTax": "0",
-                "subtotalPrice": "10.00", "financialStatus": "paid",
+                "lineItems": [
+                    {
+                        "title": "X",
+                        "quantity": 1,
+                        "originalUnitPrice": "10.00",
+                        "taxLines": [],
+                    }
+                ],
+                "shippingLines": [],
+                "taxLines": [],
+                "totalDiscounts": "0",
+                "totalPrice": "10.00",
+                "totalTax": "0",
+                "subtotalPrice": "10.00",
+                "financialStatus": "paid",
             },
             {
-                "id": "2", "name": "#1002", "createdAt": "2025-01-02T00:00:00Z",
+                "id": "2",
+                "name": "#1002",
+                "createdAt": "2025-01-02T00:00:00Z",
                 "customer": {"email": "b@x.com", "firstName": "C", "lastName": "D"},
-                "lineItems": [{"title": "Y", "quantity": 1, "originalUnitPrice": "20.00", "taxLines": []}],
-                "shippingLines": [], "taxLines": [],
-                "totalDiscounts": "0", "totalPrice": "20.00", "totalTax": "0",
-                "subtotalPrice": "20.00", "financialStatus": "pending",
+                "lineItems": [
+                    {
+                        "title": "Y",
+                        "quantity": 1,
+                        "originalUnitPrice": "20.00",
+                        "taxLines": [],
+                    }
+                ],
+                "shippingLines": [],
+                "taxLines": [],
+                "totalDiscounts": "0",
+                "totalPrice": "20.00",
+                "totalTax": "0",
+                "subtotalPrice": "20.00",
+                "financialStatus": "pending",
             },
         ]
 
@@ -370,16 +438,22 @@ class TestMainCLI(unittest.TestCase):
                 json.dump(TAX_MAP, f)
 
             import sys
+
             old_argv = sys.argv
             sys.argv = [
                 "transform_invoices.py",
-                "--input", input_path,
-                "--output", output_path,
-                "--tax-map", tax_map_path,
-                "--status-filter", "paid",
+                "--input",
+                input_path,
+                "--output",
+                output_path,
+                "--tax-map",
+                tax_map_path,
+                "--status-filter",
+                "paid",
             ]
             try:
                 from transform_invoices import main as invoice_main
+
                 invoice_main()
             finally:
                 sys.argv = old_argv

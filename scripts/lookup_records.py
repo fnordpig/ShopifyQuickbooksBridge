@@ -42,52 +42,74 @@ def lookup_customers(shopify_customers: list[dict], qbo_customers: list[dict]) -
         if email and email in qbo_by_email:
             qbo = qbo_by_email[email]
             norm_q = normalize_qbo_customer(qbo)
-            diffs = compare_fields(norm_s, norm_q, fields=[
-                "name", "email", "phone", "address_line1", "city", "state", "zip", "tax_exempt",
-            ])
+            diffs = compare_fields(
+                norm_s,
+                norm_q,
+                fields=[
+                    "name",
+                    "email",
+                    "phone",
+                    "address_line1",
+                    "city",
+                    "state",
+                    "zip",
+                    "tax_exempt",
+                ],
+            )
             matched_qbo_emails.add(email)
             has_diff = any(not d["match"] for d in diffs)
-            records.append({
-                "status": "matched",
-                "shopify": norm_s,
-                "qbo": norm_q,
-                "comparison": diffs,
-                "has_differences": has_diff,
-                "suggested_action": "review_differences" if has_diff else "none",
-            })
+            records.append(
+                {
+                    "status": "matched",
+                    "shopify": norm_s,
+                    "qbo": norm_q,
+                    "comparison": diffs,
+                    "has_differences": has_diff,
+                    "suggested_action": "review_differences" if has_diff else "none",
+                }
+            )
         else:
-            records.append({
-                "status": "missing_from_qbo",
-                "shopify": norm_s,
-                "qbo": None,
-                "comparison": None,
-                "suggested_action": "create_in_qbo",
-            })
+            records.append(
+                {
+                    "status": "missing_from_qbo",
+                    "shopify": norm_s,
+                    "qbo": None,
+                    "comparison": None,
+                    "suggested_action": "create_in_qbo",
+                }
+            )
 
     # Find orphaned QBO customers (not matched to any Shopify customer)
-    shopify_emails = {(normalize_shopify_customer(c)["email"] or "").lower() for c in shopify_customers}
+    shopify_emails = {
+        (normalize_shopify_customer(c)["email"] or "").lower()
+        for c in shopify_customers
+    }
     for qbo in qbo_customers:
         email = ((qbo.get("PrimaryEmailAddr") or {}).get("Address", "") or "").lower()
         if email and email not in shopify_emails:
-            records.append({
-                "status": "orphaned_in_qbo",
-                "shopify": None,
-                "qbo": normalize_qbo_customer(qbo),
-                "comparison": None,
-                "suggested_action": "review_or_delete",
-            })
-        elif not email and email not in matched_qbo_emails:
-            # QBO customer with no email, check PrivateNote for shopify tag
-            entries = parse_private_note(qbo.get("PrivateNote", ""))
-            has_shopify_tag = any(e["tag"] == "shopify-sync" for e in entries)
-            if has_shopify_tag:
-                records.append({
+            records.append(
+                {
                     "status": "orphaned_in_qbo",
                     "shopify": None,
                     "qbo": normalize_qbo_customer(qbo),
                     "comparison": None,
                     "suggested_action": "review_or_delete",
-                })
+                }
+            )
+        elif not email and email not in matched_qbo_emails:
+            # QBO customer with no email, check PrivateNote for shopify tag
+            entries = parse_private_note(qbo.get("PrivateNote", ""))
+            has_shopify_tag = any(e["tag"] == "shopify-sync" for e in entries)
+            if has_shopify_tag:
+                records.append(
+                    {
+                        "status": "orphaned_in_qbo",
+                        "shopify": None,
+                        "qbo": normalize_qbo_customer(qbo),
+                        "comparison": None,
+                        "suggested_action": "review_or_delete",
+                    }
+                )
 
     matched = sum(1 for r in records if r["status"] == "matched")
     return {
@@ -97,8 +119,12 @@ def lookup_customers(shopify_customers: list[dict], qbo_customers: list[dict]) -
             "total_shopify": len(shopify_customers),
             "total_qbo": len(qbo_customers),
             "matched": matched,
-            "missing_from_qbo": sum(1 for r in records if r["status"] == "missing_from_qbo"),
-            "orphaned_in_qbo": sum(1 for r in records if r["status"] == "orphaned_in_qbo"),
+            "missing_from_qbo": sum(
+                1 for r in records if r["status"] == "missing_from_qbo"
+            ),
+            "orphaned_in_qbo": sum(
+                1 for r in records if r["status"] == "orphaned_in_qbo"
+            ),
             "with_differences": sum(1 for r in records if r.get("has_differences")),
         },
         "records": records,
@@ -121,49 +147,66 @@ def lookup_orders(shopify_orders: list[dict], qbo_invoices: list[dict]) -> dict:
         norm_s = normalize_shopify_order(order)
         # Expected DocNumber format: SH-{order_number}
         import re
-        order_num = re.sub(r'[^0-9]', '', str(order.get("name", "")))
+
+        order_num = re.sub(r"[^0-9]", "", str(order.get("name", "")))
         doc_number = f"SH-{order_num}"
 
         if doc_number in qbo_by_doc:
             qbo = qbo_by_doc[doc_number]
             norm_q = normalize_qbo_invoice(qbo)
-            diffs = compare_fields(norm_s, norm_q, fields=[
-                "date", "customer_email", "subtotal", "tax_total", "grand_total",
-                "shipping_total", "discount_total", "line_item_count",
-            ])
+            diffs = compare_fields(
+                norm_s,
+                norm_q,
+                fields=[
+                    "date",
+                    "customer_email",
+                    "subtotal",
+                    "tax_total",
+                    "grand_total",
+                    "shipping_total",
+                    "discount_total",
+                    "line_item_count",
+                ],
+            )
             matched_docs.add(doc_number)
             has_diff = any(not d["match"] for d in diffs)
-            records.append({
-                "status": "matched",
-                "doc_number": doc_number,
-                "shopify": norm_s,
-                "qbo": norm_q,
-                "comparison": diffs,
-                "has_differences": has_diff,
-                "suggested_action": "review_differences" if has_diff else "none",
-            })
+            records.append(
+                {
+                    "status": "matched",
+                    "doc_number": doc_number,
+                    "shopify": norm_s,
+                    "qbo": norm_q,
+                    "comparison": diffs,
+                    "has_differences": has_diff,
+                    "suggested_action": "review_differences" if has_diff else "none",
+                }
+            )
         else:
-            records.append({
-                "status": "missing_from_qbo",
-                "doc_number": doc_number,
-                "shopify": norm_s,
-                "qbo": None,
-                "comparison": None,
-                "suggested_action": "sync_to_qbo",
-            })
+            records.append(
+                {
+                    "status": "missing_from_qbo",
+                    "doc_number": doc_number,
+                    "shopify": norm_s,
+                    "qbo": None,
+                    "comparison": None,
+                    "suggested_action": "sync_to_qbo",
+                }
+            )
 
     # Find orphaned QBO invoices
     for inv in qbo_invoices:
         doc = inv.get("DocNumber", "")
         if doc and doc not in matched_docs and doc.startswith("SH-"):
-            records.append({
-                "status": "orphaned_in_qbo",
-                "doc_number": doc,
-                "shopify": None,
-                "qbo": normalize_qbo_invoice(inv),
-                "comparison": None,
-                "suggested_action": "review_or_delete",
-            })
+            records.append(
+                {
+                    "status": "orphaned_in_qbo",
+                    "doc_number": doc,
+                    "shopify": None,
+                    "qbo": normalize_qbo_invoice(inv),
+                    "comparison": None,
+                    "suggested_action": "review_or_delete",
+                }
+            )
 
     matched = sum(1 for r in records if r["status"] == "matched")
     return {
@@ -173,8 +216,12 @@ def lookup_orders(shopify_orders: list[dict], qbo_invoices: list[dict]) -> dict:
             "total_shopify": len(shopify_orders),
             "total_qbo": len(qbo_invoices),
             "matched": matched,
-            "missing_from_qbo": sum(1 for r in records if r["status"] == "missing_from_qbo"),
-            "orphaned_in_qbo": sum(1 for r in records if r["status"] == "orphaned_in_qbo"),
+            "missing_from_qbo": sum(
+                1 for r in records if r["status"] == "missing_from_qbo"
+            ),
+            "orphaned_in_qbo": sum(
+                1 for r in records if r["status"] == "orphaned_in_qbo"
+            ),
             "with_differences": sum(1 for r in records if r.get("has_differences")),
         },
         "records": records,
@@ -182,13 +229,25 @@ def lookup_orders(shopify_orders: list[dict], qbo_invoices: list[dict]) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Cross-system record lookup and comparison")
-    parser.add_argument("--type", required=True, choices=["customer", "order"],
-                        help="Record type to look up")
+    parser = argparse.ArgumentParser(
+        description="Cross-system record lookup and comparison"
+    )
+    parser.add_argument(
+        "--type",
+        required=True,
+        choices=["customer", "order"],
+        help="Record type to look up",
+    )
     parser.add_argument("--shopify", required=True, help="Path to Shopify data JSON")
-    parser.add_argument("--qbo", required=False, default=None, help="Path to QBO data JSON")
-    parser.add_argument("--output", "-o", default=None, help="Output file (default: stdout)")
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print output JSON")
+    parser.add_argument(
+        "--qbo", required=False, default=None, help="Path to QBO data JSON"
+    )
+    parser.add_argument(
+        "--output", "-o", default=None, help="Output file (default: stdout)"
+    )
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print output JSON"
+    )
     args = parser.parse_args()
 
     with open(args.shopify, "r") as f:

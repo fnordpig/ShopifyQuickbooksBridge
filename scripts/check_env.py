@@ -23,9 +23,7 @@ from pathlib import Path
 def run_cmd(cmd: list[str]) -> tuple[int, str]:
     """Run a command and return (exit_code, stdout)."""
     try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=10
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         return result.returncode, result.stdout.strip()
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return 1, ""
@@ -44,12 +42,22 @@ def check_node() -> dict:
     """Check Node.js installation and version."""
     code, output = run_cmd(["node", "--version"])
     if code != 0:
-        return {"name": "Node.js", "required": "18+", "found": None, "passed": False,
-                "fix": "brew install node (macOS) or visit https://nodejs.org"}
+        return {
+            "name": "Node.js",
+            "required": "18+",
+            "found": None,
+            "passed": False,
+            "fix": "brew install node (macOS) or visit https://nodejs.org",
+        }
     version = parse_version(output)
     passed = version is not None and version[0] >= 18
-    return {"name": "Node.js", "required": "18+", "found": output, "passed": passed,
-            "fix": "Update Node.js to 18+ via your package manager" if not passed else None}
+    return {
+        "name": "Node.js",
+        "required": "18+",
+        "found": output,
+        "passed": passed,
+        "fix": "Update Node.js to 18+ via your package manager" if not passed else None,
+    }
 
 
 def check_python() -> dict:
@@ -57,16 +65,26 @@ def check_python() -> dict:
     version = sys.version_info
     found = f"{version.major}.{version.minor}.{version.micro}"
     passed = (version.major, version.minor) >= (3, 10)
-    return {"name": "Python", "required": "3.10+", "found": found, "passed": passed,
-            "fix": "brew install python@3.12 (macOS)" if not passed else None}
+    return {
+        "name": "Python",
+        "required": "3.10+",
+        "found": found,
+        "passed": passed,
+        "fix": "brew install python@3.12 (macOS)" if not passed else None,
+    }
 
 
 def check_npx() -> dict:
     """Check npx availability."""
     code, output = run_cmd(["npx", "--version"])
     passed = code == 0
-    return {"name": "npx", "required": "any", "found": output if passed else None, "passed": passed,
-            "fix": "npm install -g npx (comes with Node.js)" if not passed else None}
+    return {
+        "name": "npx",
+        "required": "any",
+        "found": output if passed else None,
+        "passed": passed,
+        "fix": "npm install -g npx (comes with Node.js)" if not passed else None,
+    }
 
 
 def check_git() -> dict:
@@ -74,16 +92,30 @@ def check_git() -> dict:
     code, output = run_cmd(["git", "--version"])
     passed = code == 0
     version = output.replace("git version ", "") if passed else None
-    return {"name": "git", "required": "any", "found": version, "passed": passed,
-            "fix": "xcode-select --install (macOS) or visit https://git-scm.com" if not passed else None}
+    return {
+        "name": "git",
+        "required": "any",
+        "found": version,
+        "passed": passed,
+        "fix": "xcode-select --install (macOS) or visit https://git-scm.com"
+        if not passed
+        else None,
+    }
 
 
 def check_claude_cli() -> dict:
     """Check Claude CLI availability."""
     code, output = run_cmd(["claude", "--version"])
     passed = code == 0
-    return {"name": "Claude CLI", "required": "any", "found": output if passed else None, "passed": passed,
-            "fix": "Visit https://docs.anthropic.com/en/docs/claude-code" if not passed else None}
+    return {
+        "name": "Claude CLI",
+        "required": "any",
+        "found": output if passed else None,
+        "passed": passed,
+        "fix": "Visit https://docs.anthropic.com/en/docs/claude-code"
+        if not passed
+        else None,
+    }
 
 
 def check_mcp_servers() -> dict:
@@ -127,7 +159,13 @@ def check_qbo_credentials() -> dict:
 
 
 def main():
-    checks = [check_node(), check_python(), check_npx(), check_git(), check_claude_cli()]
+    checks = [
+        check_node(),
+        check_python(),
+        check_npx(),
+        check_git(),
+        check_claude_cli(),
+    ]
     mcp_status = check_mcp_servers()
     qbo_creds = check_qbo_credentials()
 
@@ -150,16 +188,28 @@ def main():
     for check in checks:
         icon = "+" if check["passed"] else "x"
         version = check["found"] or "not found"
-        print(f"  [{icon}] {check['name']:<12} {version:<20} (requires {check['required']})")
+        print(
+            f"  [{icon}] {check['name']:<12} {version:<20} (requires {check['required']})"
+        )
         if check.get("fix"):
             print(f"      Fix: {check['fix']}")
 
     print()
     print("  Existing Setup:")
-    print(f"    Shopify MCP:  {'configured' if mcp_status['shopify_configured'] else 'not configured'}")
-    print(f"    QBO MCP:      {'configured' if mcp_status['quickbooks_configured'] else 'not configured'}")
-    print(f"    QBO creds:    {'found' if qbo_creds['credentials_file'] else 'not found'}"
-          + (f" (tokens: {'yes' if qbo_creds['has_tokens'] else 'no'})" if qbo_creds['credentials_file'] else ""))
+    print(
+        f"    Shopify MCP:  {'configured' if mcp_status['shopify_configured'] else 'not configured'}"
+    )
+    print(
+        f"    QBO MCP:      {'configured' if mcp_status['quickbooks_configured'] else 'not configured'}"
+    )
+    print(
+        f"    QBO creds:    {'found' if qbo_creds['credentials_file'] else 'not found'}"
+        + (
+            f" (tokens: {'yes' if qbo_creds['has_tokens'] else 'no'})"
+            if qbo_creds["credentials_file"]
+            else ""
+        )
+    )
 
     print()
     if all_passed:

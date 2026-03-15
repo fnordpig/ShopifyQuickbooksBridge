@@ -16,12 +16,16 @@ def parse_private_note(note: str | None) -> list[dict]:
         return []
 
     entries = []
-    for match in re.finditer(r'\[([a-z-]+):([^\]]+)\]\s*(.*?)(?=\[|$)', note, re.DOTALL):
-        entries.append({
-            "tag": match.group(1),
-            "value": match.group(2),
-            "detail": match.group(3).strip(),
-        })
+    for match in re.finditer(
+        r"\[([a-z-]+):([^\]]+)\]\s*(.*?)(?=\[|$)", note, re.DOTALL
+    ):
+        entries.append(
+            {
+                "tag": match.group(1),
+                "value": match.group(2),
+                "detail": match.group(3).strip(),
+            }
+        )
     return entries
 
 
@@ -74,14 +78,14 @@ def normalize_qbo_customer(customer: dict) -> dict:
     # Try Notes field as fallback
     if not shopify_id:
         notes = customer.get("Notes", "")
-        id_match = re.search(r'Shopify ID:\s*(\S+)', notes)
+        id_match = re.search(r"Shopify ID:\s*(\S+)", notes)
         if id_match:
             shopify_id = id_match.group(1)
 
     # Extract tags from Notes
     tags = []
     notes = customer.get("Notes", "")
-    tags_match = re.search(r'Shopify tags:\s*(.+?)(?:\s*\||$)', notes)
+    tags_match = re.search(r"Shopify tags:\s*(.+?)(?:\s*\||$)", notes)
     if tags_match:
         tags = [t.strip() for t in tags_match.group(1).split(",") if t.strip()]
 
@@ -110,11 +114,15 @@ def normalize_shopify_order(order: dict) -> dict:
     for item in line_items:
         if "node" in item:
             item = item["node"]
-        items.append({
-            "title": item.get("title", ""),
-            "quantity": int(item.get("quantity", 1)),
-            "unit_price": str(item.get("originalUnitPrice") or item.get("price", "0")),
-        })
+        items.append(
+            {
+                "title": item.get("title", ""),
+                "quantity": int(item.get("quantity", 1)),
+                "unit_price": str(
+                    item.get("originalUnitPrice") or item.get("price", "0")
+                ),
+            }
+        )
 
     shipping_total = Decimal("0")
     for s in order.get("shippingLines", []):
@@ -132,12 +140,26 @@ def normalize_shopify_order(order: dict) -> dict:
         "date": (order.get("createdAt", "") or "")[:10],
         "customer_email": customer.get("email", "") or "",
         "customer_name": f"{customer.get('firstName', '') or ''} {customer.get('lastName', '') or ''}".strip(),
-        "subtotal": str(order.get("subtotalPrice") or order.get("subtotalPriceSet", {}).get("shopMoney", {}).get("amount", "0")),
-        "tax_total": str(order.get("totalTax") or order.get("totalTaxSet", {}).get("shopMoney", {}).get("amount", "0")),
+        "subtotal": str(
+            order.get("subtotalPrice")
+            or order.get("subtotalPriceSet", {}).get("shopMoney", {}).get("amount", "0")
+        ),
+        "tax_total": str(
+            order.get("totalTax")
+            or order.get("totalTaxSet", {}).get("shopMoney", {}).get("amount", "0")
+        ),
         "tax_rate": tax_rate,
         "shipping_total": str(shipping_total),
-        "discount_total": str(order.get("totalDiscounts") or order.get("totalDiscountsSet", {}).get("shopMoney", {}).get("amount", "0")),
-        "grand_total": str(order.get("totalPrice") or order.get("totalPriceSet", {}).get("shopMoney", {}).get("amount", "0")),
+        "discount_total": str(
+            order.get("totalDiscounts")
+            or order.get("totalDiscountsSet", {})
+            .get("shopMoney", {})
+            .get("amount", "0")
+        ),
+        "grand_total": str(
+            order.get("totalPrice")
+            or order.get("totalPriceSet", {}).get("shopMoney", {}).get("amount", "0")
+        ),
         "line_item_count": len(items),
         "items": items,
     }
@@ -146,14 +168,30 @@ def normalize_shopify_order(order: dict) -> dict:
 def normalize_qbo_invoice(invoice: dict) -> dict:
     """Normalize QBO invoice to comparable fields."""
     lines = invoice.get("Line", [])
-    sales_lines = [line for line in lines if line.get("DetailType") == "SalesItemLineDetail"]
-    discount_lines = [line for line in lines if line.get("DetailType") == "DiscountLineDetail"]
-    shipping_lines = [line for line in sales_lines if "Shipping" in (line.get("Description") or "")]
-    product_lines = [line for line in sales_lines if "Shipping" not in (line.get("Description") or "")]
+    sales_lines = [
+        line for line in lines if line.get("DetailType") == "SalesItemLineDetail"
+    ]
+    discount_lines = [
+        line for line in lines if line.get("DetailType") == "DiscountLineDetail"
+    ]
+    shipping_lines = [
+        line for line in sales_lines if "Shipping" in (line.get("Description") or "")
+    ]
+    product_lines = [
+        line
+        for line in sales_lines
+        if "Shipping" not in (line.get("Description") or "")
+    ]
 
-    subtotal = sum((Decimal(str(line["Amount"])) for line in product_lines), Decimal("0")).quantize(Decimal("0.01"))
-    shipping = sum((Decimal(str(line["Amount"])) for line in shipping_lines), Decimal("0")).quantize(Decimal("0.01"))
-    discount = sum((Decimal(str(line["Amount"])) for line in discount_lines), Decimal("0")).quantize(Decimal("0.01"))
+    subtotal = sum(
+        (Decimal(str(line["Amount"])) for line in product_lines), Decimal("0")
+    ).quantize(Decimal("0.01"))
+    shipping = sum(
+        (Decimal(str(line["Amount"])) for line in shipping_lines), Decimal("0")
+    ).quantize(Decimal("0.01"))
+    discount = sum(
+        (Decimal(str(line["Amount"])) for line in discount_lines), Decimal("0")
+    ).quantize(Decimal("0.01"))
 
     tax_detail = invoice.get("TxnTaxDetail", {}) or {}
     tax_total = Decimal(str(tax_detail.get("TotalTax", 0))).quantize(Decimal("0.01"))
@@ -166,11 +204,13 @@ def normalize_qbo_invoice(invoice: dict) -> dict:
     items = []
     for line in product_lines:
         detail = line.get("SalesItemLineDetail", {})
-        items.append({
-            "title": line.get("Description", ""),
-            "quantity": int(detail.get("Qty", 1)),
-            "unit_price": str(detail.get("UnitPrice", "0")),
-        })
+        items.append(
+            {
+                "title": line.get("Description", ""),
+                "quantity": int(detail.get("Qty", 1)),
+                "unit_price": str(detail.get("UnitPrice", "0")),
+            }
+        )
 
     grand_total = Decimal(str(invoice.get("TotalAmt", 0))).quantize(Decimal("0.01"))
 
@@ -205,13 +245,20 @@ def compare_fields(a: dict, b: dict, fields: list[str] | None = None) -> list[di
         # Normalize for comparison
         str_a = str(val_a) if val_a is not None else ""
         str_b = str(val_b) if val_b is not None else ""
-        results.append({
-            "field": field,
-            "a": str_a,
-            "b": str_b,
-            "match": str_a == str_b,
-        })
+        results.append(
+            {
+                "field": field,
+                "a": str_a,
+                "b": str_b,
+                "match": str_a == str_b,
+            }
+        )
     return results
+
+
+def quantize_decimal(d: Decimal) -> str:
+    """Quantize a Decimal to 2 decimal places and return as string."""
+    return str(d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
 def format_currency(amount) -> str:

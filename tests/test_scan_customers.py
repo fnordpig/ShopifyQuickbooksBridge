@@ -15,19 +15,24 @@ class TestScanCustomers(unittest.TestCase):
         return [
             {
                 "id": "gid://shopify/Customer/1001",
-                "firstName": "Jane", "lastName": "Smith",
+                "firstName": "Jane",
+                "lastName": "Smith",
                 "email": "jane@example.com",
                 "phone": "+1-555-0100",
                 "taxExempt": False,
                 "tags": ["vip"],
                 "defaultAddress": {
-                    "address1": "123 Main St", "city": "Seattle",
-                    "provinceCode": "WA", "zip": "98101", "countryCodeV2": "US",
+                    "address1": "123 Main St",
+                    "city": "Seattle",
+                    "provinceCode": "WA",
+                    "zip": "98101",
+                    "countryCodeV2": "US",
                 },
             },
             {
                 "id": "gid://shopify/Customer/1002",
-                "firstName": "Bob", "lastName": "Lee",
+                "firstName": "Bob",
+                "lastName": "Lee",
                 "email": "bob@example.com",
                 "phone": "",
                 "taxExempt": True,
@@ -44,8 +49,11 @@ class TestScanCustomers(unittest.TestCase):
                 "PrimaryEmailAddr": {"Address": "jane@example.com"},
                 "PrimaryPhone": {"FreeFormNumber": "+1-555-0100"},
                 "BillAddr": {
-                    "Line1": "123 Main St", "City": "Seattle",
-                    "CountrySubDivisionCode": "WA", "PostalCode": "98101", "Country": "US",
+                    "Line1": "123 Main St",
+                    "City": "Seattle",
+                    "CountrySubDivisionCode": "WA",
+                    "PostalCode": "98101",
+                    "Country": "US",
                 },
                 "Taxable": True,
                 "PrivateNote": "[shopify-sync:gid://shopify/Customer/1001] Imported",
@@ -64,12 +72,14 @@ class TestScanCustomers(unittest.TestCase):
         self.assertEqual(len(missing), 0)
 
     def test_orphaned_in_qbo(self):
-        orphan_qbo = [{
-            "Id": "999",
-            "DisplayName": "Orphan User",
-            "PrimaryEmailAddr": {"Address": "orphan@example.com"},
-            "Taxable": True,
-        }]
+        orphan_qbo = [
+            {
+                "Id": "999",
+                "DisplayName": "Orphan User",
+                "PrimaryEmailAddr": {"Address": "orphan@example.com"},
+                "Taxable": True,
+            }
+        ]
         result = scan_customers(self._shopify(), self._qbo() + orphan_qbo)
         orphaned = [i for i in result["issues"] if i["type"] == "orphaned_in_qbo"]
         self.assertEqual(len(orphaned), 1)
@@ -85,10 +95,14 @@ class TestScanCustomers(unittest.TestCase):
     def test_sorted_by_severity(self):
         qbo = self._qbo()
         qbo[0]["PrimaryPhone"] = {"FreeFormNumber": "+1-555-9999"}
-        orphan = [{
-            "Id": "999", "DisplayName": "Orphan",
-            "PrimaryEmailAddr": {"Address": "orphan@example.com"}, "Taxable": True,
-        }]
+        orphan = [
+            {
+                "Id": "999",
+                "DisplayName": "Orphan",
+                "PrimaryEmailAddr": {"Address": "orphan@example.com"},
+                "Taxable": True,
+            }
+        ]
         result = scan_customers(self._shopify(), qbo + orphan)
         # missing_from_qbo is high severity, should come before data_mismatch (medium)
         types = [i["type"] for i in result["issues"]]

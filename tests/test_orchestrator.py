@@ -36,7 +36,10 @@ class TestValidateSync(unittest.TestCase):
 
     def test_valid_when_all_emails_match(self):
         customers = [
-            {"PrimaryEmailAddr": {"Address": "jane@example.com"}, "DisplayName": "Jane"},
+            {
+                "PrimaryEmailAddr": {"Address": "jane@example.com"},
+                "DisplayName": "Jane",
+            },
         ]
         invoices = [
             {
@@ -52,7 +55,10 @@ class TestValidateSync(unittest.TestCase):
 
     def test_orphan_invoice_detected(self):
         customers = [
-            {"PrimaryEmailAddr": {"Address": "alice@example.com"}, "DisplayName": "Alice"},
+            {
+                "PrimaryEmailAddr": {"Address": "alice@example.com"},
+                "DisplayName": "Alice",
+            },
         ]
         invoices = [
             {
@@ -125,7 +131,10 @@ class TestValidateSync(unittest.TestCase):
 
     def test_case_insensitive_email_matching(self):
         customers = [
-            {"PrimaryEmailAddr": {"Address": "Jane@Example.com"}, "DisplayName": "Jane"},
+            {
+                "PrimaryEmailAddr": {"Address": "Jane@Example.com"},
+                "DisplayName": "Jane",
+            },
         ]
         invoices = [
             {
@@ -215,13 +224,21 @@ class TestGenerateAuditReport(unittest.TestCase):
             with open(report_path) as f:
                 report = json.load(f)
 
-            self.assertTrue(any("3 invoices" in item for item in report["action_items"]))
+            self.assertTrue(
+                any("3 invoices" in item for item in report["action_items"])
+            )
 
     def test_duplicate_doc_number_action_item(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             validation = {
                 "valid": False,
-                "issues": [{"type": "duplicate_doc_numbers", "count": 2, "details": ["SH-1001"]}],
+                "issues": [
+                    {
+                        "type": "duplicate_doc_numbers",
+                        "count": 2,
+                        "details": ["SH-1001"],
+                    }
+                ],
                 "summary": {},
             }
             report_path = generate_audit_report({}, {}, validation, tmpdir)
@@ -229,13 +246,22 @@ class TestGenerateAuditReport(unittest.TestCase):
             with open(report_path) as f:
                 report = json.load(f)
 
-            self.assertTrue(any("duplicate" in item.lower() for item in report["action_items"]))
+            self.assertTrue(
+                any("duplicate" in item.lower() for item in report["action_items"])
+            )
 
     def test_tax_discrepancy_action_item(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             validation = {
                 "valid": False,
-                "issues": [{"type": "tax_discrepancy", "discrepancy": 1.10, "qbo_total_tax": 5.0, "shopify_total_tax": 3.9}],
+                "issues": [
+                    {
+                        "type": "tax_discrepancy",
+                        "discrepancy": 1.10,
+                        "qbo_total_tax": 5.0,
+                        "shopify_total_tax": 3.9,
+                    }
+                ],
                 "summary": {},
             }
             report_path = generate_audit_report({}, {}, validation, tmpdir)

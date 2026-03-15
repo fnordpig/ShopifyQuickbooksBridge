@@ -51,26 +51,30 @@ def scan_customers(shopify_customers: list[dict], qbo_customers: list[dict]) -> 
     # Check for duplicates in Shopify
     for email, customers in shopify_by_email.items():
         if len(customers) > 1:
-            issues.append({
-                "type": "duplicate_email",
-                "severity": "high",
-                "shopify_email": email,
-                "count": len(customers),
-                "shopify_ids": [c.get("id", "") for c in customers],
-                "message": f"Duplicate email '{email}' found in {len(customers)} Shopify customers",
-            })
+            issues.append(
+                {
+                    "type": "duplicate_email",
+                    "severity": "high",
+                    "shopify_email": email,
+                    "count": len(customers),
+                    "shopify_ids": [c.get("id", "") for c in customers],
+                    "message": f"Duplicate email '{email}' found in {len(customers)} Shopify customers",
+                }
+            )
 
     # Check for duplicates in QBO
     for email, customers in qbo_by_email.items():
         if len(customers) > 1:
-            issues.append({
-                "type": "duplicate_email",
-                "severity": "high",
-                "qbo_email": email,
-                "count": len(customers),
-                "qbo_ids": [c.get("Id", "") for c in customers],
-                "message": f"Duplicate email '{email}' found in {len(customers)} QBO customers",
-            })
+            issues.append(
+                {
+                    "type": "duplicate_email",
+                    "severity": "high",
+                    "qbo_email": email,
+                    "count": len(customers),
+                    "qbo_ids": [c.get("Id", "") for c in customers],
+                    "message": f"Duplicate email '{email}' found in {len(customers)} QBO customers",
+                }
+            )
 
     # Cross-reference: find missing and mismatched
     matched_qbo_emails: set[str] = set()
@@ -85,56 +89,74 @@ def scan_customers(shopify_customers: list[dict], qbo_customers: list[dict]) -> 
             matched_qbo_emails.add(email)
 
             # Check for data mismatches
-            diffs = compare_fields(norm_s, norm_q, fields=[
-                "name", "phone", "address_line1", "city", "state", "zip", "tax_exempt",
-            ])
+            diffs = compare_fields(
+                norm_s,
+                norm_q,
+                fields=[
+                    "name",
+                    "phone",
+                    "address_line1",
+                    "city",
+                    "state",
+                    "zip",
+                    "tax_exempt",
+                ],
+            )
             mismatched = [d for d in diffs if not d["match"]]
             if mismatched:
-                issues.append({
-                    "type": "data_mismatch",
-                    "severity": "medium",
+                issues.append(
+                    {
+                        "type": "data_mismatch",
+                        "severity": "medium",
+                        "shopify_email": email,
+                        "shopify_id": sc.get("id", ""),
+                        "qbo_id": qbo.get("Id", ""),
+                        "mismatched_fields": mismatched,
+                        "message": f"Data mismatch for '{email}': {', '.join(d['field'] for d in mismatched)}",
+                    }
+                )
+        else:
+            issues.append(
+                {
+                    "type": "missing_from_qbo",
+                    "severity": "high",
                     "shopify_email": email,
                     "shopify_id": sc.get("id", ""),
-                    "qbo_id": qbo.get("Id", ""),
-                    "mismatched_fields": mismatched,
-                    "message": f"Data mismatch for '{email}': {', '.join(d['field'] for d in mismatched)}",
-                })
-        else:
-            issues.append({
-                "type": "missing_from_qbo",
-                "severity": "high",
-                "shopify_email": email,
-                "shopify_id": sc.get("id", ""),
-                "shopify_name": norm_s["name"],
-                "message": f"Customer '{norm_s['name']}' ({email}) not found in QBO",
-            })
+                    "shopify_name": norm_s["name"],
+                    "message": f"Customer '{norm_s['name']}' ({email}) not found in QBO",
+                }
+            )
 
     # Shopify customers with no email
     for sc in shopify_customers:
         if not sc.get("email"):
             norm_s = normalize_shopify_customer(sc)
-            issues.append({
-                "type": "missing_from_qbo",
-                "severity": "high",
-                "shopify_email": "",
-                "shopify_id": sc.get("id", ""),
-                "shopify_name": norm_s["name"],
-                "message": f"Customer '{norm_s['name']}' has no email, cannot match to QBO",
-            })
+            issues.append(
+                {
+                    "type": "missing_from_qbo",
+                    "severity": "high",
+                    "shopify_email": "",
+                    "shopify_id": sc.get("id", ""),
+                    "shopify_name": norm_s["name"],
+                    "message": f"Customer '{norm_s['name']}' has no email, cannot match to QBO",
+                }
+            )
 
     # Find orphaned QBO customers
     for email, qbo_list in qbo_by_email.items():
         if email not in shopify_by_email:
             qbo = qbo_list[0]
             norm_q = normalize_qbo_customer(qbo)
-            issues.append({
-                "type": "orphaned_in_qbo",
-                "severity": "low",
-                "qbo_email": email,
-                "qbo_id": qbo.get("Id", ""),
-                "qbo_name": norm_q["name"],
-                "message": f"QBO customer '{norm_q['name']}' ({email}) has no Shopify match",
-            })
+            issues.append(
+                {
+                    "type": "orphaned_in_qbo",
+                    "severity": "low",
+                    "qbo_email": email,
+                    "qbo_id": qbo.get("Id", ""),
+                    "qbo_name": norm_q["name"],
+                    "message": f"QBO customer '{norm_q['name']}' ({email}) has no Shopify match",
+                }
+            )
 
     # Sort by severity
     issues.sort(key=lambda i: SEVERITY_ORDER.get(i["type"], 99))
@@ -159,10 +181,16 @@ def scan_customers(shopify_customers: list[dict], qbo_customers: list[dict]) -> 
 
 def main():
     parser = argparse.ArgumentParser(description="Cross-system customer scan")
-    parser.add_argument("--shopify", required=True, help="Path to Shopify customers JSON")
+    parser.add_argument(
+        "--shopify", required=True, help="Path to Shopify customers JSON"
+    )
     parser.add_argument("--qbo", required=True, help="Path to QBO customers JSON")
-    parser.add_argument("--output", "-o", default=None, help="Output file (default: stdout)")
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print output JSON")
+    parser.add_argument(
+        "--output", "-o", default=None, help="Output file (default: stdout)"
+    )
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print output JSON"
+    )
     args = parser.parse_args()
 
     with open(args.shopify, "r") as f:

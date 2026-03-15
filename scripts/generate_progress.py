@@ -598,16 +598,16 @@ def generate_phase_html(phase: dict, current_step: int) -> str:
     <div class="phase-header">
       <div class="phase-icon">{icon_text}</div>
       <div class="phase-info">
-        <div class="phase-title">{phase['title']}</div>
-        <div class="phase-subtitle">{phase['subtitle']}</div>
+        <div class="phase-title">{phase["title"]}</div>
+        <div class="phase-subtitle">{phase["subtitle"]}</div>
       </div>
       <div class="phase-meta">
         <div class="phase-status">{status_text}</div>
-        <div>{phase['time']}</div>
+        <div>{phase["time"]}</div>
       </div>
     </div>
     <div class="phase-body">
-      {phase['instructions']}
+      {phase["instructions"]}
     </div>
   </div>"""
 
@@ -615,8 +615,14 @@ def generate_phase_html(phase: dict, current_step: int) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Generate setup wizard progress page")
     parser.add_argument("--output", "-o", required=True, help="Output HTML file path")
-    parser.add_argument("--step", "-s", type=int, default=0, choices=range(7),
-                        help="Current step (0-6). 6 = all complete.")
+    parser.add_argument(
+        "--step",
+        "-s",
+        type=int,
+        default=0,
+        choices=range(7),
+        help="Current step (0-6). 6 = all complete.",
+    )
     args = parser.parse_args()
 
     current_step = args.step

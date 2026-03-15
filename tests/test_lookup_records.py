@@ -22,8 +22,11 @@ class TestLookupCustomers(unittest.TestCase):
                 "taxExempt": False,
                 "tags": ["vip"],
                 "defaultAddress": {
-                    "address1": "123 Main St", "city": "Seattle",
-                    "provinceCode": "WA", "zip": "98101", "countryCodeV2": "US",
+                    "address1": "123 Main St",
+                    "city": "Seattle",
+                    "provinceCode": "WA",
+                    "zip": "98101",
+                    "countryCodeV2": "US",
                 },
             },
             {
@@ -46,8 +49,11 @@ class TestLookupCustomers(unittest.TestCase):
                 "PrimaryEmailAddr": {"Address": "jane@example.com"},
                 "PrimaryPhone": {"FreeFormNumber": "+1-555-0100"},
                 "BillAddr": {
-                    "Line1": "123 Main St", "City": "Seattle",
-                    "CountrySubDivisionCode": "WA", "PostalCode": "98101", "Country": "US",
+                    "Line1": "123 Main St",
+                    "City": "Seattle",
+                    "CountrySubDivisionCode": "WA",
+                    "PostalCode": "98101",
+                    "Country": "US",
                 },
                 "Taxable": True,
                 "PrivateNote": "[shopify-sync:gid://shopify/Customer/1001] Imported",
@@ -85,39 +91,77 @@ class TestLookupCustomers(unittest.TestCase):
 
 class TestLookupOrders(unittest.TestCase):
     def test_matched_order(self):
-        shopify = [{
-            "id": "gid://shopify/Order/5001", "name": "#1001",
-            "createdAt": "2026-03-14T10:00:00Z",
-            "customer": {"email": "jane@example.com", "firstName": "Jane", "lastName": "Smith"},
-            "subtotalPrice": "59.98", "totalTax": "3.90", "totalPrice": "68.87",
-            "totalDiscounts": "5.00",
-            "taxLines": [{"title": "Tax", "rate": "0.065", "price": "3.90"}],
-            "lineItems": [{"title": "W", "quantity": 2, "originalUnitPrice": "29.99", "taxLines": []}],
-            "shippingLines": [{"price": "9.99"}],
-        }]
-        qbo = [{
-            "DocNumber": "SH-1001", "TxnDate": "2026-03-14",
-            "TotalAmt": 68.87,
-            "TxnTaxDetail": {"TotalTax": 3.90, "TaxLine": []},
-            "Line": [{"DetailType": "SalesItemLineDetail", "Amount": 59.98,
-                       "SalesItemLineDetail": {"Qty": 2, "UnitPrice": 29.99}}],
-            "_customer_email": "jane@example.com", "_customer_name": "Jane Smith",
-            "PrivateNote": "[shopify-sync:gid://shopify/Order/5001] Imported",
-        }]
+        shopify = [
+            {
+                "id": "gid://shopify/Order/5001",
+                "name": "#1001",
+                "createdAt": "2026-03-14T10:00:00Z",
+                "customer": {
+                    "email": "jane@example.com",
+                    "firstName": "Jane",
+                    "lastName": "Smith",
+                },
+                "subtotalPrice": "59.98",
+                "totalTax": "3.90",
+                "totalPrice": "68.87",
+                "totalDiscounts": "5.00",
+                "taxLines": [{"title": "Tax", "rate": "0.065", "price": "3.90"}],
+                "lineItems": [
+                    {
+                        "title": "W",
+                        "quantity": 2,
+                        "originalUnitPrice": "29.99",
+                        "taxLines": [],
+                    }
+                ],
+                "shippingLines": [{"price": "9.99"}],
+            }
+        ]
+        qbo = [
+            {
+                "DocNumber": "SH-1001",
+                "TxnDate": "2026-03-14",
+                "TotalAmt": 68.87,
+                "TxnTaxDetail": {"TotalTax": 3.90, "TaxLine": []},
+                "Line": [
+                    {
+                        "DetailType": "SalesItemLineDetail",
+                        "Amount": 59.98,
+                        "SalesItemLineDetail": {"Qty": 2, "UnitPrice": 29.99},
+                    }
+                ],
+                "_customer_email": "jane@example.com",
+                "_customer_name": "Jane Smith",
+                "PrivateNote": "[shopify-sync:gid://shopify/Order/5001] Imported",
+            }
+        ]
         result = lookup_orders(shopify, qbo)
         matched = [r for r in result["records"] if r["status"] == "matched"]
         self.assertEqual(len(matched), 1)
 
     def test_missing_order(self):
-        shopify = [{
-            "id": "gid://shopify/Order/5001", "name": "#1001",
-            "createdAt": "2026-03-14T10:00:00Z",
-            "customer": {"email": "j@x.com", "firstName": "J", "lastName": "S"},
-            "subtotalPrice": "10.00", "totalTax": "0", "totalPrice": "10.00",
-            "totalDiscounts": "0", "taxLines": [],
-            "lineItems": [{"title": "X", "quantity": 1, "originalUnitPrice": "10.00", "taxLines": []}],
-            "shippingLines": [],
-        }]
+        shopify = [
+            {
+                "id": "gid://shopify/Order/5001",
+                "name": "#1001",
+                "createdAt": "2026-03-14T10:00:00Z",
+                "customer": {"email": "j@x.com", "firstName": "J", "lastName": "S"},
+                "subtotalPrice": "10.00",
+                "totalTax": "0",
+                "totalPrice": "10.00",
+                "totalDiscounts": "0",
+                "taxLines": [],
+                "lineItems": [
+                    {
+                        "title": "X",
+                        "quantity": 1,
+                        "originalUnitPrice": "10.00",
+                        "taxLines": [],
+                    }
+                ],
+                "shippingLines": [],
+            }
+        ]
         result = lookup_orders(shopify, [])
         missing = [r for r in result["records"] if r["status"] == "missing_from_qbo"]
         self.assertEqual(len(missing), 1)

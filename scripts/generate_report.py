@@ -14,12 +14,14 @@ import json
 import re
 import sys
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
-from utils import format_currency
+from utils import format_currency, quantize_decimal
 
 
-def generate_sync_status_report(shopify_orders: list[dict], qbo_invoices: list[dict]) -> dict:
+def generate_sync_status_report(
+    shopify_orders: list[dict], qbo_invoices: list[dict]
+) -> dict:
     """Generate sync status report: counts synced vs total."""
     # Build set of synced order numbers from QBO DocNumbers
     qbo_doc_numbers = set()
@@ -32,16 +34,18 @@ def generate_sync_status_report(shopify_orders: list[dict], qbo_invoices: list[d
     synced = 0
     unsynced_orders = []
     for order in shopify_orders:
-        order_num = re.sub(r'[^0-9]', '', str(order.get("name", "")))
+        order_num = re.sub(r"[^0-9]", "", str(order.get("name", "")))
         doc_number = f"SH-{order_num}"
         if doc_number in qbo_doc_numbers:
             synced += 1
         else:
-            unsynced_orders.append({
-                "order_name": order.get("name", ""),
-                "shopify_id": order.get("id", ""),
-                "doc_number": doc_number,
-            })
+            unsynced_orders.append(
+                {
+                    "order_name": order.get("name", ""),
+                    "shopify_id": order.get("id", ""),
+                    "doc_number": doc_number,
+                }
+            )
 
     sync_pct = (synced / len(shopify_orders) * 100) if shopify_orders else 0
 
@@ -59,7 +63,9 @@ def generate_sync_status_report(shopify_orders: list[dict], qbo_invoices: list[d
     }
 
 
-def generate_reconciliation_report(shopify_orders: list[dict], qbo_invoices: list[dict]) -> dict:
+def generate_reconciliation_report(
+    shopify_orders: list[dict], qbo_invoices: list[dict]
+) -> dict:
     """Generate reconciliation report: compare totals between systems."""
     # Shopify totals
     shopify_subtotal = Decimal("0")
@@ -100,9 +106,7 @@ def generate_reconciliation_report(shopify_orders: list[dict], qbo_invoices: lis
             elif line.get("DetailType") == "DiscountLineDetail":
                 qbo_discounts += Decimal(str(line.get("Amount", 0)))
 
-    def q(d: Decimal) -> str:
-        return str(d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
+    q = quantize_decimal
     return {
         "report_type": "reconciliation",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -159,19 +163,19 @@ def generate_tax_report(qbo_invoices: list[dict]) -> dict:
             tax_groups[key]["total_taxable_sales"] += net_taxable
             tax_groups[key]["invoice_count"] += 1
 
-    def q(d: Decimal) -> str:
-        return str(d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
+    q = quantize_decimal
     groups_list = []
     for g in tax_groups.values():
-        groups_list.append({
-            "tax_code": g["tax_code"],
-            "shopify_title": g["shopify_title"],
-            "rate_percent": g["rate_percent"],
-            "total_tax_collected": q(g["total_tax_collected"]),
-            "total_taxable_sales": q(g["total_taxable_sales"]),
-            "invoice_count": g["invoice_count"],
-        })
+        groups_list.append(
+            {
+                "tax_code": g["tax_code"],
+                "shopify_title": g["shopify_title"],
+                "rate_percent": g["rate_percent"],
+                "total_tax_collected": q(g["total_tax_collected"]),
+                "total_taxable_sales": q(g["total_taxable_sales"]),
+                "invoice_count": g["invoice_count"],
+            }
+        )
 
     return {
         "report_type": "tax",
@@ -207,9 +211,7 @@ def generate_financial_report(qbo_invoices: list[dict]) -> dict:
             elif line.get("DetailType") == "DiscountLineDetail":
                 total_discounts += Decimal(str(line.get("Amount", 0)))
 
-    def q(d: Decimal) -> str:
-        return str(d.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-
+    q = quantize_decimal
     avg_order = (total_gross / len(qbo_invoices)) if qbo_invoices else Decimal("0")
 
     return {
@@ -232,14 +234,27 @@ def generate_financial_report(qbo_invoices: list[dict]) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate reports from sync data")
-    parser.add_argument("--type", required=True,
-                        choices=["sync-status", "reconciliation", "tax", "financial"],
-                        help="Report type")
-    parser.add_argument("--shopify-orders", default=None, help="Path to Shopify orders JSON")
-    parser.add_argument("--qbo-invoices", default=None, help="Path to QBO invoices JSON")
-    parser.add_argument("--output", "-o", default=None, help="Output file (default: stdout)")
-    parser.add_argument("--html-output", default=None, help="Path to write HTML dashboard")
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print output JSON")
+    parser.add_argument(
+        "--type",
+        required=True,
+        choices=["sync-status", "reconciliation", "tax", "financial"],
+        help="Report type",
+    )
+    parser.add_argument(
+        "--shopify-orders", default=None, help="Path to Shopify orders JSON"
+    )
+    parser.add_argument(
+        "--qbo-invoices", default=None, help="Path to QBO invoices JSON"
+    )
+    parser.add_argument(
+        "--output", "-o", default=None, help="Output file (default: stdout)"
+    )
+    parser.add_argument(
+        "--html-output", default=None, help="Path to write HTML dashboard"
+    )
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print output JSON"
+    )
     args = parser.parse_args()
 
     shopify_orders = []
@@ -306,7 +321,7 @@ h1 {{ color: #333; }}
 </style></head>
 <body>
 <h1>{title}</h1>
-<p>Generated: {report.get('generated_at', '')}</p>
+<p>Generated: {report.get("generated_at", "")}</p>
 <table><tr><th>Metric</th><th>Value</th></tr>
 {rows}
 </table>

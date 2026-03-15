@@ -13,7 +13,12 @@ TAX_MAP = {
     "mappings": {
         "US": {"State Tax": "TAX"},
     },
-    "defaults": {"taxable": "TAX", "exempt": "NON", "shipping": "NON", "unknown": "TAX"},
+    "defaults": {
+        "taxable": "TAX",
+        "exempt": "NON",
+        "shipping": "NON",
+        "unknown": "TAX",
+    },
 }
 
 
@@ -28,8 +33,11 @@ class TestDiffCustomers(unittest.TestCase):
             "taxExempt": False,
             "tags": ["vip"],
             "defaultAddress": {
-                "address1": "123 Main St", "city": "Seattle",
-                "provinceCode": "WA", "zip": "98101", "countryCodeV2": "US",
+                "address1": "123 Main St",
+                "city": "Seattle",
+                "provinceCode": "WA",
+                "zip": "98101",
+                "countryCodeV2": "US",
             },
         }
 
@@ -42,8 +50,11 @@ class TestDiffCustomers(unittest.TestCase):
             "PrimaryEmailAddr": {"Address": "jane@example.com"},
             "PrimaryPhone": {"FreeFormNumber": "+1-555-0100"},
             "BillAddr": {
-                "Line1": "123 Main St", "City": "Seattle",
-                "CountrySubDivisionCode": "WA", "PostalCode": "98101", "Country": "US",
+                "Line1": "123 Main St",
+                "City": "Seattle",
+                "CountrySubDivisionCode": "WA",
+                "PostalCode": "98101",
+                "Country": "US",
             },
             "Taxable": True,
             "PrivateNote": "[shopify-sync:gid://shopify/Customer/1001] Imported",
@@ -82,10 +93,20 @@ class TestDiffInvoices(unittest.TestCase):
             "id": "gid://shopify/Order/5001",
             "name": "#1001",
             "createdAt": "2026-03-14T10:00:00Z",
-            "customer": {"email": "jane@example.com", "firstName": "Jane", "lastName": "Smith"},
+            "customer": {
+                "email": "jane@example.com",
+                "firstName": "Jane",
+                "lastName": "Smith",
+            },
             "lineItems": [
-                {"title": "Widget", "quantity": 2, "originalUnitPrice": "29.99",
-                 "taxLines": [{"title": "State Tax", "rate": "0.065", "price": "3.90"}]},
+                {
+                    "title": "Widget",
+                    "quantity": 2,
+                    "originalUnitPrice": "29.99",
+                    "taxLines": [
+                        {"title": "State Tax", "rate": "0.065", "price": "3.90"}
+                    ],
+                },
             ],
             "shippingLines": [{"title": "Standard", "price": "9.99"}],
             "taxLines": [{"title": "State Tax", "rate": "0.065", "price": "3.90"}],
@@ -101,24 +122,49 @@ class TestDiffInvoices(unittest.TestCase):
             "DocNumber": "SH-1001",
             "TxnDate": "2026-03-14",
             "TotalAmt": 68.87,
-            "TxnTaxDetail": {"TotalTax": 3.90, "TaxLine": [
-                {"Amount": 3.90, "DetailType": "TaxLineDetail",
-                 "TaxLineDetail": {"TaxRateRef": {"value": "TAX"}, "TaxPercent": 6.5,
-                                   "PercentBased": True, "NetAmountTaxable": 0}},
-            ]},
+            "TxnTaxDetail": {
+                "TotalTax": 3.90,
+                "TaxLine": [
+                    {
+                        "Amount": 3.90,
+                        "DetailType": "TaxLineDetail",
+                        "TaxLineDetail": {
+                            "TaxRateRef": {"value": "TAX"},
+                            "TaxPercent": 6.5,
+                            "PercentBased": True,
+                            "NetAmountTaxable": 0,
+                        },
+                    },
+                ],
+            },
             "Line": [
-                {"DetailType": "SalesItemLineDetail", "Amount": 59.98,
-                 "Description": "Widget",
-                 "SalesItemLineDetail": {"Qty": 2, "UnitPrice": 29.99,
-                                         "TaxCodeRef": {"value": "TAX"},
-                                         "ItemRef": {"value": "1", "name": "Sales"}}},
-                {"DetailType": "SalesItemLineDetail", "Amount": 9.99,
-                 "Description": "Shipping: Standard",
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99,
-                                         "TaxCodeRef": {"value": "NON"},
-                                         "ItemRef": {"value": "1", "name": "Shipping"}}},
-                {"DetailType": "DiscountLineDetail", "Amount": 5.0,
-                 "DiscountLineDetail": {"PercentBased": False}},
+                {
+                    "DetailType": "SalesItemLineDetail",
+                    "Amount": 59.98,
+                    "Description": "Widget",
+                    "SalesItemLineDetail": {
+                        "Qty": 2,
+                        "UnitPrice": 29.99,
+                        "TaxCodeRef": {"value": "TAX"},
+                        "ItemRef": {"value": "1", "name": "Sales"},
+                    },
+                },
+                {
+                    "DetailType": "SalesItemLineDetail",
+                    "Amount": 9.99,
+                    "Description": "Shipping: Standard",
+                    "SalesItemLineDetail": {
+                        "Qty": 1,
+                        "UnitPrice": 9.99,
+                        "TaxCodeRef": {"value": "NON"},
+                        "ItemRef": {"value": "1", "name": "Shipping"},
+                    },
+                },
+                {
+                    "DetailType": "DiscountLineDetail",
+                    "Amount": 5.0,
+                    "DiscountLineDetail": {"PercentBased": False},
+                },
             ],
             "PrivateNote": "[shopify-sync:gid://shopify/Order/5001] Imported",
         }

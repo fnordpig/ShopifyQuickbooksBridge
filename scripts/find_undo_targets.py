@@ -66,17 +66,19 @@ def find_undo_targets(
             if identifier and identifier != inv.get("DocNumber", ""):
                 continue
 
-            targets.append({
-                "entity_type": "invoice",
-                "id": inv.get("Id", ""),
-                "doc_number": inv.get("DocNumber", ""),
-                "display_name": inv.get("DocNumber", ""),
-                "total_amount": inv.get("TotalAmt", 0),
-                "action_tag": entry["tag"],
-                "action_value": entry["value"],
-                "action_detail": entry["detail"],
-                "private_note": private_note,
-            })
+            targets.append(
+                {
+                    "entity_type": "invoice",
+                    "id": inv.get("Id", ""),
+                    "doc_number": inv.get("DocNumber", ""),
+                    "display_name": inv.get("DocNumber", ""),
+                    "total_amount": inv.get("TotalAmt", 0),
+                    "action_tag": entry["tag"],
+                    "action_value": entry["value"],
+                    "action_detail": entry["detail"],
+                    "private_note": private_note,
+                }
+            )
             break  # One match per record is enough
 
     # Scan customers
@@ -93,56 +95,69 @@ def find_undo_targets(
                 continue
             if identifier:
                 # For customers, identifier might match display name or shopify id
-                if identifier != cust.get("DisplayName", "") and identifier != entry["value"]:
+                if (
+                    identifier != cust.get("DisplayName", "")
+                    and identifier != entry["value"]
+                ):
                     continue
 
-            targets.append({
-                "entity_type": "customer",
-                "id": cust.get("Id", ""),
-                "doc_number": "",
-                "display_name": cust.get("DisplayName", ""),
-                "action_tag": entry["tag"],
-                "action_value": entry["value"],
-                "action_detail": entry["detail"],
-                "private_note": private_note,
-            })
+            targets.append(
+                {
+                    "entity_type": "customer",
+                    "id": cust.get("Id", ""),
+                    "doc_number": "",
+                    "display_name": cust.get("DisplayName", ""),
+                    "action_tag": entry["tag"],
+                    "action_value": entry["value"],
+                    "action_detail": entry["detail"],
+                    "private_note": private_note,
+                }
+            )
             break
 
     # Build reversal plan
     reversal_plan = []
     for target in targets:
         if action == "sync":
-            reversal_plan.append({
-                "target_id": target["id"],
-                "entity_type": target["entity_type"],
-                "display": target["display_name"] or target["doc_number"],
-                "reversal_action": "delete",
-                "description": f"Delete {target['entity_type']} '{target['display_name'] or target['doc_number']}' (undo sync)",
-            })
+            reversal_plan.append(
+                {
+                    "target_id": target["id"],
+                    "entity_type": target["entity_type"],
+                    "display": target["display_name"] or target["doc_number"],
+                    "reversal_action": "delete",
+                    "description": f"Delete {target['entity_type']} '{target['display_name'] or target['doc_number']}' (undo sync)",
+                }
+            )
         elif action == "fix":
-            reversal_plan.append({
-                "target_id": target["id"],
-                "entity_type": target["entity_type"],
-                "display": target["display_name"] or target["doc_number"],
-                "reversal_action": "restore_original",
-                "description": f"Restore original state of {target['entity_type']} '{target['display_name'] or target['doc_number']}'",
-            })
+            reversal_plan.append(
+                {
+                    "target_id": target["id"],
+                    "entity_type": target["entity_type"],
+                    "display": target["display_name"] or target["doc_number"],
+                    "reversal_action": "restore_original",
+                    "description": f"Restore original state of {target['entity_type']} '{target['display_name'] or target['doc_number']}'",
+                }
+            )
         elif action == "delete":
-            reversal_plan.append({
-                "target_id": target["id"],
-                "entity_type": target["entity_type"],
-                "display": target["display_name"] or target["doc_number"],
-                "reversal_action": "undelete",
-                "description": f"Undelete {target['entity_type']} '{target['display_name'] or target['doc_number']}'",
-            })
+            reversal_plan.append(
+                {
+                    "target_id": target["id"],
+                    "entity_type": target["entity_type"],
+                    "display": target["display_name"] or target["doc_number"],
+                    "reversal_action": "undelete",
+                    "description": f"Undelete {target['entity_type']} '{target['display_name'] or target['doc_number']}'",
+                }
+            )
         elif action == "resolve-customers":
-            reversal_plan.append({
-                "target_id": target["id"],
-                "entity_type": target["entity_type"],
-                "display": target["display_name"],
-                "reversal_action": "unresolve",
-                "description": f"Undo customer resolution for '{target['display_name']}'",
-            })
+            reversal_plan.append(
+                {
+                    "target_id": target["id"],
+                    "entity_type": target["entity_type"],
+                    "display": target["display_name"],
+                    "reversal_action": "unresolve",
+                    "description": f"Undo customer resolution for '{target['display_name']}'",
+                }
+            )
 
     return {
         "action": action,
@@ -157,15 +172,28 @@ def find_undo_targets(
 
 def main():
     parser = argparse.ArgumentParser(description="Find undo targets by action and date")
-    parser.add_argument("--action", required=True,
-                        choices=["sync", "fix", "delete", "resolve-customers"],
-                        help="Action to undo")
+    parser.add_argument(
+        "--action",
+        required=True,
+        choices=["sync", "fix", "delete", "resolve-customers"],
+        help="Action to undo",
+    )
     parser.add_argument("--date", default=None, help="Date filter (YYYY-MM-DD)")
-    parser.add_argument("--identifier", default=None, help="Identifier filter (e.g., SH-1001)")
-    parser.add_argument("--qbo-invoices", default=None, help="Path to QBO invoices JSON")
-    parser.add_argument("--qbo-customers", default=None, help="Path to QBO customers JSON")
-    parser.add_argument("--output", "-o", default=None, help="Output file (default: stdout)")
-    parser.add_argument("--pretty", action="store_true", help="Pretty-print output JSON")
+    parser.add_argument(
+        "--identifier", default=None, help="Identifier filter (e.g., SH-1001)"
+    )
+    parser.add_argument(
+        "--qbo-invoices", default=None, help="Path to QBO invoices JSON"
+    )
+    parser.add_argument(
+        "--qbo-customers", default=None, help="Path to QBO customers JSON"
+    )
+    parser.add_argument(
+        "--output", "-o", default=None, help="Output file (default: stdout)"
+    )
+    parser.add_argument(
+        "--pretty", action="store_true", help="Pretty-print output JSON"
+    )
     args = parser.parse_args()
 
     qbo_invoices = []

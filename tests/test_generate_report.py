@@ -41,28 +41,45 @@ class TestSyncStatusReport(unittest.TestCase):
 
 class TestReconciliationReport(unittest.TestCase):
     def test_basic_reconciliation(self):
-        shopify_orders = [{
-            "name": "#1001",
-            "subtotalPrice": "100.00",
-            "totalTax": "6.50",
-            "totalPrice": "116.49",
-            "totalDiscounts": "0",
-            "shippingLines": [{"price": "9.99"}],
-            "lineItems": [{"title": "X", "quantity": 1, "originalUnitPrice": "100.00", "taxLines": []}],
-            "taxLines": [],
-        }]
-        qbo_invoices = [{
-            "DocNumber": "SH-1001",
-            "TotalAmt": 116.49,
-            "TxnTaxDetail": {"TotalTax": 6.50, "TaxLine": []},
-            "Line": [
-                {"DetailType": "SalesItemLineDetail", "Amount": 100.00,
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 100.00}},
-                {"DetailType": "SalesItemLineDetail", "Amount": 9.99,
-                 "Description": "Shipping: Std",
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99}},
-            ],
-        }]
+        shopify_orders = [
+            {
+                "name": "#1001",
+                "subtotalPrice": "100.00",
+                "totalTax": "6.50",
+                "totalPrice": "116.49",
+                "totalDiscounts": "0",
+                "shippingLines": [{"price": "9.99"}],
+                "lineItems": [
+                    {
+                        "title": "X",
+                        "quantity": 1,
+                        "originalUnitPrice": "100.00",
+                        "taxLines": [],
+                    }
+                ],
+                "taxLines": [],
+            }
+        ]
+        qbo_invoices = [
+            {
+                "DocNumber": "SH-1001",
+                "TotalAmt": 116.49,
+                "TxnTaxDetail": {"TotalTax": 6.50, "TaxLine": []},
+                "Line": [
+                    {
+                        "DetailType": "SalesItemLineDetail",
+                        "Amount": 100.00,
+                        "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 100.00},
+                    },
+                    {
+                        "DetailType": "SalesItemLineDetail",
+                        "Amount": 9.99,
+                        "Description": "Shipping: Std",
+                        "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99},
+                    },
+                ],
+            }
+        ]
         result = generate_reconciliation_report(shopify_orders, qbo_invoices)
         self.assertEqual(result["report_type"], "reconciliation")
         self.assertEqual(result["data"]["shopify_total_revenue"], "100.00")
@@ -75,24 +92,38 @@ class TestReconciliationReport(unittest.TestCase):
 
 class TestTaxReport(unittest.TestCase):
     def test_groups_by_tax(self):
-        qbo_invoices = [{
-            "DocNumber": "SH-1001",
-            "TxnTaxDetail": {
-                "TotalTax": 6.50,
-                "TaxLine": [
-                    {"Amount": 6.50, "DetailType": "TaxLineDetail",
-                     "TaxLineDetail": {"TaxRateRef": {"value": "TAX"},
-                                       "TaxPercent": 6.5,
-                                       "PercentBased": True, "NetAmountTaxable": 100.00},
-                     "_shopify_tax_title": "State Tax"},
+        qbo_invoices = [
+            {
+                "DocNumber": "SH-1001",
+                "TxnTaxDetail": {
+                    "TotalTax": 6.50,
+                    "TaxLine": [
+                        {
+                            "Amount": 6.50,
+                            "DetailType": "TaxLineDetail",
+                            "TaxLineDetail": {
+                                "TaxRateRef": {"value": "TAX"},
+                                "TaxPercent": 6.5,
+                                "PercentBased": True,
+                                "NetAmountTaxable": 100.00,
+                            },
+                            "_shopify_tax_title": "State Tax",
+                        },
+                    ],
+                },
+                "Line": [
+                    {
+                        "DetailType": "SalesItemLineDetail",
+                        "Amount": 100.00,
+                        "SalesItemLineDetail": {
+                            "Qty": 1,
+                            "UnitPrice": 100.00,
+                            "TaxCodeRef": {"value": "TAX"},
+                        },
+                    },
                 ],
-            },
-            "Line": [
-                {"DetailType": "SalesItemLineDetail", "Amount": 100.00,
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 100.00,
-                                         "TaxCodeRef": {"value": "TAX"}}},
-            ],
-        }]
+            }
+        ]
         result = generate_tax_report(qbo_invoices)
         self.assertEqual(result["report_type"], "tax")
         self.assertGreater(len(result["data"]["tax_groups"]), 0)
@@ -101,20 +132,31 @@ class TestTaxReport(unittest.TestCase):
 
 class TestFinancialReport(unittest.TestCase):
     def test_basic_financial(self):
-        qbo_invoices = [{
-            "DocNumber": "SH-1001",
-            "TotalAmt": 116.49,
-            "TxnTaxDetail": {"TotalTax": 6.50, "TaxLine": []},
-            "Line": [
-                {"DetailType": "SalesItemLineDetail", "Amount": 100.00,
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 100.00}},
-                {"DetailType": "SalesItemLineDetail", "Amount": 9.99,
-                 "Description": "Shipping: Std",
-                 "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99}},
-                {"DetailType": "DiscountLineDetail", "Amount": 0,
-                 "DiscountLineDetail": {"PercentBased": False}},
-            ],
-        }]
+        qbo_invoices = [
+            {
+                "DocNumber": "SH-1001",
+                "TotalAmt": 116.49,
+                "TxnTaxDetail": {"TotalTax": 6.50, "TaxLine": []},
+                "Line": [
+                    {
+                        "DetailType": "SalesItemLineDetail",
+                        "Amount": 100.00,
+                        "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 100.00},
+                    },
+                    {
+                        "DetailType": "SalesItemLineDetail",
+                        "Amount": 9.99,
+                        "Description": "Shipping: Std",
+                        "SalesItemLineDetail": {"Qty": 1, "UnitPrice": 9.99},
+                    },
+                    {
+                        "DetailType": "DiscountLineDetail",
+                        "Amount": 0,
+                        "DiscountLineDetail": {"PercentBased": False},
+                    },
+                ],
+            }
+        ]
         result = generate_financial_report(qbo_invoices)
         self.assertEqual(result["report_type"], "financial")
         self.assertIn("total_revenue", result["data"])

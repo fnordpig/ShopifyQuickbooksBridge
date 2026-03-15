@@ -49,8 +49,10 @@ class TestFindUndoTargets(unittest.TestCase):
 
     def test_find_sync_targets_by_date(self):
         result = find_undo_targets(
-            action="sync", date="2026-03-14",
-            qbo_invoices=self._invoices(), qbo_customers=self._customers(),
+            action="sync",
+            date="2026-03-14",
+            qbo_invoices=self._invoices(),
+            qbo_customers=self._customers(),
         )
         targets = result["targets"]
         # Should find invoice SH-1001 and customer Jane Smith (both synced on 2026-03-14)
@@ -60,8 +62,10 @@ class TestFindUndoTargets(unittest.TestCase):
 
     def test_find_fix_targets(self):
         result = find_undo_targets(
-            action="fix", date=None,
-            qbo_invoices=self._invoices(), qbo_customers=self._customers(),
+            action="fix",
+            date=None,
+            qbo_invoices=self._invoices(),
+            qbo_customers=self._customers(),
         )
         targets = result["targets"]
         ids = [t["id"] for t in targets]
@@ -69,8 +73,10 @@ class TestFindUndoTargets(unittest.TestCase):
 
     def test_find_delete_targets(self):
         result = find_undo_targets(
-            action="delete", date=None,
-            qbo_invoices=self._invoices(), qbo_customers=self._customers(),
+            action="delete",
+            date=None,
+            qbo_invoices=self._invoices(),
+            qbo_customers=self._customers(),
         )
         targets = result["targets"]
         ids = [t["id"] for t in targets]
@@ -78,8 +84,11 @@ class TestFindUndoTargets(unittest.TestCase):
 
     def test_find_by_identifier(self):
         result = find_undo_targets(
-            action="sync", date=None, identifier="SH-1001",
-            qbo_invoices=self._invoices(), qbo_customers=self._customers(),
+            action="sync",
+            date=None,
+            identifier="SH-1001",
+            qbo_invoices=self._invoices(),
+            qbo_customers=self._customers(),
         )
         targets = result["targets"]
         self.assertEqual(len(targets), 1)
@@ -87,15 +96,18 @@ class TestFindUndoTargets(unittest.TestCase):
 
     def test_reversal_plan(self):
         result = find_undo_targets(
-            action="sync", date="2026-03-14",
-            qbo_invoices=self._invoices(), qbo_customers=self._customers(),
+            action="sync",
+            date="2026-03-14",
+            qbo_invoices=self._invoices(),
+            qbo_customers=self._customers(),
         )
         self.assertIn("reversal_plan", result)
         self.assertGreater(len(result["reversal_plan"]), 0)
 
     def test_empty_inputs(self):
-        result = find_undo_targets(action="sync", date="2026-03-14",
-                                   qbo_invoices=[], qbo_customers=[])
+        result = find_undo_targets(
+            action="sync", date="2026-03-14", qbo_invoices=[], qbo_customers=[]
+        )
         self.assertEqual(len(result["targets"]), 0)
 
 

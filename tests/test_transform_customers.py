@@ -107,10 +107,12 @@ class TestTransformCustomer(unittest.TestCase):
         self.assertEqual(result["DisplayName"], "jane@example.com")
 
     def test_display_name_falls_back_to_shopify_customer_id(self):
-        result = transform_customer(self._make_customer(
-            firstName="", lastName="", email=""
-        ))
-        self.assertEqual(result["DisplayName"], "Shopify Customer gid://shopify/Customer/1001")
+        result = transform_customer(
+            self._make_customer(firstName="", lastName="", email="")
+        )
+        self.assertEqual(
+            result["DisplayName"], "Shopify Customer gid://shopify/Customer/1001"
+        )
 
     def test_display_name_handles_none_names(self):
         result = transform_customer(self._make_customer(firstName=None, lastName=None))
@@ -184,7 +186,9 @@ class TestTransformCustomer(unittest.TestCase):
     def test_private_note_contains_provenance_tag(self):
         result = transform_customer(self._make_customer())
         self.assertIn("PrivateNote", result)
-        self.assertIn("[shopify-sync:gid://shopify/Customer/1001]", result["PrivateNote"])
+        self.assertIn(
+            "[shopify-sync:gid://shopify/Customer/1001]", result["PrivateNote"]
+        )
 
     def test_private_note_contains_imported_on_date(self):
         result = transform_customer(self._make_customer())
@@ -204,8 +208,14 @@ class TestDeduplicateDisplayNames(unittest.TestCase):
 
     def test_duplicate_appends_email(self):
         customers = [
-            {"DisplayName": "Jane Smith", "PrimaryEmailAddr": {"Address": "jane1@x.com"}},
-            {"DisplayName": "Jane Smith", "PrimaryEmailAddr": {"Address": "jane2@x.com"}},
+            {
+                "DisplayName": "Jane Smith",
+                "PrimaryEmailAddr": {"Address": "jane1@x.com"},
+            },
+            {
+                "DisplayName": "Jane Smith",
+                "PrimaryEmailAddr": {"Address": "jane2@x.com"},
+            },
         ]
         result = deduplicate_display_names(customers)
         # First keeps original name
@@ -274,8 +284,16 @@ class TestMainCLI(unittest.TestCase):
 
             from transform_customers import main as customer_main
             import sys
+
             old_argv = sys.argv
-            sys.argv = ["transform_customers.py", "--input", input_path, "--output", output_path, "--pretty"]
+            sys.argv = [
+                "transform_customers.py",
+                "--input",
+                input_path,
+                "--output",
+                output_path,
+                "--pretty",
+            ]
             try:
                 customer_main()
             finally:
