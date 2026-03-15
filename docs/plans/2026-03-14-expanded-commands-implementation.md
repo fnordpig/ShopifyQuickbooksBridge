@@ -4,9 +4,13 @@
 
 **Goal:** Add 6 new commands/skills (lookup, fix, delete, resolve-customers, report, undo), update sync to write PrivateNote provenance tags, and update reconcile to do record-by-record consistency checks.
 
-**Architecture:** Each new capability is a command/skill pair. Commands are thin .md wrappers (3-6 lines). Skills are detailed SKILL.md files with step-by-step instructions for Claude. The Python transform scripts get a PrivateNote update. All write operations use propose-then-confirm. Audit trail lives in QBO PrivateNote fields.
+**Architecture:** Each new capability is a command/skill pair backed by Python scripts. Commands are thin .md wrappers. Skills instruct Claude to: (1) call MCP tools to fetch raw data, (2) pipe data through Python scripts for deterministic computation, (3) present results with rich markdown tables and artifacts. All write operations use propose-then-confirm. Audit trail lives in QBO PrivateNote fields.
 
-**Tech Stack:** Markdown (skills/commands), Python (transform scripts), Shopify MCP (`get-customers`, `get-orders`, `get-order`), QBO MCP (`query`, `create_customer`, `create_invoice`, `delete_transaction`, `profit_and_loss`, `balance_sheet`)
+**Key principle — script maximalism:** All deterministic/algorithmic work (diffing, matching, aggregating, reconciling, formatting comparisons) lives in Python scripts. Claude orchestrates MCP calls, invokes scripts, presents results, and handles the confirmation flow. Claude does NOT do inline computation.
+
+**Key principle — UI maximalism:** Use rich markdown (tables, status indicators, structured output) for all responses. Generate HTML artifacts for visual reports (reconciliation dashboards, tax breakdowns, customer scan results) when running in environments that support them.
+
+**Tech Stack:** Markdown (skills/commands), Python (scripts for all computation), Shopify MCP (`get-customers`, `get-orders`, `get-order`), QBO MCP (`query`, `create_customer`, `create_invoice`, `delete_transaction`, `profit_and_loss`, `balance_sheet`)
 
 **Design doc:** `docs/plans/2026-03-14-expanded-commands-design.md`
 
@@ -140,7 +144,227 @@ git commit -m "feat: update sync skill to document PrivateNote provenance passth
 
 ---
 
-### Task 3: Create lookup command and skill
+### Task 3: Create core Python scripts for computation
+
+All deterministic logic lives in scripts. Claude calls MCP for raw data, passes it to scripts, presents results.
+
+**Files:**
+- Create: `scripts/lookup_records.py`
+- Create: `scripts/diff_records.py`
+- Create: `scripts/scan_customers.py`
+- Create: `scripts/generate_report.py`
+- Create: `scripts/find_undo_targets.py`
+- Test: `tests/test_lookup_records.py`
+- Test: `tests/test_diff_records.py`
+- Test: `tests/test_scan_customers.py`
+- Test: `tests/test_generate_report.py`
+- Test: `tests/test_find_undo_targets.py`
+
+#### 3a: `scripts/lookup_records.py`
+
+Takes Shopify + QBO data for one entity, produces a structured side-by-side comparison.
+
+```python
+"""Cross-system record comparison.
+
+Usage:
+  python lookup_records.py --type customer --shopify shopify_customer.json --qbo qbo_customer.json
+  python lookup_records.py --type order --shopify shopify_order.json --qbo qbo_invoice.json
+
+Outputs JSON:
+  {
+    "entity_type": "customer",
+    "shopify": { ... normalized fields ... },
+    "qbo": { ... normalized fields ... },
+    "comparison": [
+      {"field": "Name", "shopify": "Jane Smith", "qbo": "Jane Smith", "match": true},
+      {"field": "Tax", "shopify": "6.5%", "qbo": "0%", "match": false}
+    ],
+    "sync_status": "mismatch",  // "synced" | "mismatch" | "missing_from_qbo" | "missing_from_shopify"
+    "mismatches": [{"field": "Tax", "shopify": "6.5%", "qbo": "0%"}],
+    "suggested_action": "fix"  // "fix" | "sync" | "resolve-customers" | "none"
+  }
+"""
+```
+
+Write TDD: test for customer match, customer mismatch, order match, order mismatch, missing from QBO, missing from Shopify.
+
+#### 3b: `scripts/diff_records.py`
+
+Takes a Shopify source record + QBO actual record + tax-mapping.json, computes expected QBO state, diffs against actual.
+
+```python
+"""Record diffing with expected state computation.
+
+Usage:
+  python diff_records.py --type invoice --shopify shopify_order.json --qbo qbo_invoice.json --tax-map tax-mapping.json
+  python diff_records.py --type customer --shopify shopify_customer.json --qbo qbo_customer.json
+
+Outputs JSON:
+  {
+    "record_id": "SH-1042",
+    "discrepancies": [
+      {
+        "field": "TaxCodeRef",
+        "actual": "NON",
+        "expected": "TAX",
+        "severity": "high",
+        "description": "Tax code should be TAX (6.5%) based on Shopify tax line 'State Tax'"
+      }
+    ],
+    "proposed_fixes": [
+      {
+        "action": "update_tax_code",
+        "field": "TaxCodeRef",
+        "from": "NON",
+        "to": "TAX",
+        "description": "Update tax code from NON to TAX (6.5%)"
+      }
+    ],
+    "private_note_entry": "[shopify-qbo:fix] Tax updated from NON to TAX (6.5%) on 2026-03-14. Confirmed by user."
+  }
+"""
+```
+
+Reuses transform logic from `transform_invoices.py` and `transform_customers.py` to compute expected state. Write TDD: test tax mismatch, amount mismatch, customer ref mismatch, no discrepancies.
+
+#### 3c: `scripts/scan_customers.py`
+
+Takes full customer lists from both systems, cross-references, categorizes mismatches.
+
+```python
+"""Cross-system customer scan.
+
+Usage:
+  python scan_customers.py --shopify shopify_customers.json --qbo qbo_customers.json
+
+Outputs JSON:
+  {
+    "summary": {"shopify_count": 245, "qbo_synced": 238, "qbo_other": 12, "issues": 7},
+    "issues": [
+      {
+        "severity": "high",
+        "category": "missing_from_qbo",
+        "shopify_email": "john@example.com",
+        "shopify_name": "John Doe",
+        "proposed_action": "create",
+        "description": "Customer in Shopify but not in QBO"
+      },
+      {
+        "severity": "high",
+        "category": "duplicate_email",
+        "email": "jane@example.com",
+        "qbo_records": [{"id": "42", "name": "Jane Smith"}, {"id": "187", "name": "Jane S."}],
+        "proposed_action": "merge",
+        "description": "2 QBO customers share the same email"
+      },
+      {
+        "severity": "medium",
+        "category": "data_mismatch",
+        "email": "bob@example.com",
+        "field": "DisplayName",
+        "shopify_value": "Robert Smith",
+        "qbo_value": "Bob Smith",
+        "proposed_action": "update",
+        "description": "Name differs between systems"
+      }
+    ]
+  }
+"""
+```
+
+Categorizes: missing_from_qbo, duplicate_email, data_mismatch, orphaned_in_qbo, qbo_only. Sorted by severity. Write TDD: test each category, test empty lists, test all-synced scenario.
+
+#### 3d: `scripts/generate_report.py`
+
+Takes raw data from both systems, produces structured report output for any of the 4 report types.
+
+```python
+"""Report generation.
+
+Usage:
+  python generate_report.py --type sync-status --shopify-customers sc.json --shopify-orders so.json --qbo-customers qc.json --qbo-invoices qi.json
+  python generate_report.py --type reconciliation --shopify-orders so.json --qbo-invoices qi.json
+  python generate_report.py --type tax --shopify-orders so.json --qbo-invoices qi.json --tax-map tax-mapping.json
+  python generate_report.py --type financial --qbo-pnl pnl.json --qbo-bs bs.json
+
+Outputs JSON with report_type, data tables, summary stats, and warnings.
+For artifact generation, also outputs an HTML version to --html-output if specified.
+"""
+```
+
+Each report type returns structured data Claude can render as rich markdown or an HTML artifact. The `--html-output` flag generates a self-contained HTML dashboard. Write TDD: test each report type with sample data.
+
+#### 3e: `scripts/find_undo_targets.py`
+
+Takes QBO records with PrivateNotes, parses action history, identifies undo targets.
+
+```python
+"""Find records to undo based on PrivateNote action history.
+
+Usage:
+  python find_undo_targets.py --action sync --date 2026-03-14 --qbo-invoices qi.json --qbo-customers qc.json
+  python find_undo_targets.py --action fix --identifier SH-1042 --qbo-invoices qi.json
+
+Outputs JSON:
+  {
+    "action_to_undo": "sync",
+    "date": "2026-03-14",
+    "targets": [
+      {"type": "invoice", "id": "238", "doc_number": "SH-1042", "action_note": "[shopify-sync:...] Imported on 2026-03-14"},
+      {"type": "customer", "id": "42", "name": "Jane Smith", "action_note": "[shopify-sync:...] Imported on 2026-03-14"}
+    ],
+    "reversal_plan": [
+      {"step": 1, "action": "delete_invoice", "id": "238", "doc_number": "SH-1042"},
+      {"step": 2, "action": "delete_customer", "id": "42", "name": "Jane Smith"}
+    ],
+    "warnings": ["Cannot undo deletions — records are permanently removed"]
+  }
+"""
+```
+
+Write TDD: test sync undo, fix undo, no targets found, records with payments (non-deletable).
+
+**Implementation approach for Task 3:**
+
+Build each script + its tests as a sub-task. TDD for each: write failing test, implement, verify pass. Commit after each script is green. Each script reads JSON from stdin or file args, writes JSON to stdout. Scripts share utility functions via a `scripts/utils.py` module for common operations (PrivateNote parsing, field normalization, Shopify GID extraction).
+
+**Step 1: Create `scripts/utils.py` with shared helpers**
+
+```python
+"""Shared utilities for shopify-qbo scripts."""
+
+def parse_private_note(note: str) -> list[dict]:
+    """Parse PrivateNote into structured action entries.
+
+    Returns list of {"tag": "shopify-sync", "gid": "...", "date": "...", "detail": "..."}
+    """
+
+def normalize_shopify_customer(customer: dict) -> dict:
+    """Normalize Shopify customer to comparable fields."""
+
+def normalize_qbo_customer(customer: dict) -> dict:
+    """Normalize QBO customer to comparable fields."""
+
+def normalize_shopify_order(order: dict) -> dict:
+    """Normalize Shopify order to comparable fields."""
+
+def normalize_qbo_invoice(invoice: dict) -> dict:
+    """Normalize QBO invoice to comparable fields."""
+
+def format_currency(amount: float) -> str:
+    """Format as $X,XXX.XX"""
+```
+
+Test utils first, then each script builds on them.
+
+**Commit strategy:** One commit per script+tests pair (5 commits for this task).
+
+---
+
+### Task 4: Create lookup command and skill
+
+**Script integration:** The skill's Step 3 (present comparison) delegates to `scripts/lookup_records.py`. Claude fetches raw data via MCP (Steps 1-2), saves to temp JSON files, runs the script, presents the structured output as rich markdown. For environments supporting artifacts, generate an HTML comparison view.
 
 **Files:**
 - Create: `commands/lookup.md`
@@ -197,21 +421,36 @@ Determine what the user is looking for:
 - Shopify: `get-orders` filtered to find the order number, or `get-order` if you have the GID
 - QBO: `query` with `SELECT Id, DocNumber, TxnDate, TotalAmt, Balance, CustomerRef, TxnTaxDetail, PrivateNote FROM Invoice WHERE DocNumber = 'SH-<number>'`
 
-## Step 3: Present Side-by-Side Comparison
+## Step 3: Run Comparison Script
 
-**Customer format:**
-Present a two-column table comparing every mapped field. Use ✓ for matches, ✗ for mismatches.
+Save the fetched data to temp JSON files and run:
 
-Include these fields:
-- Name, Email, Phone, Address (full), Tax status
-- Shopify ID, QBO ID
-- Sync status: check QBO PrivateNote for `[shopify-sync]` tag
+```bash
+python ${CLAUDE_PLUGIN_ROOT}/scripts/lookup_records.py \
+  --type customer \
+  --shopify /tmp/shopify_customer.json \
+  --qbo /tmp/qbo_customer.json
+```
 
-**Order/Invoice format:**
-Present a two-column table comparing:
-- Date, Customer, Subtotal, Tax (amount and rate), Shipping, Discounts, Total
-- Line item count
-- Sync status from PrivateNote
+Or for orders:
+```bash
+python ${CLAUDE_PLUGIN_ROOT}/scripts/lookup_records.py \
+  --type order \
+  --shopify /tmp/shopify_order.json \
+  --qbo /tmp/qbo_invoice.json
+```
+
+The script outputs structured JSON with field-by-field comparisons, match/mismatch indicators,
+sync status, and suggested next actions.
+
+## Step 4: Present Results
+
+Render the script output as a rich markdown table. Use ✓ for matches, ✗ for mismatches.
+
+**Customer fields:** Name, Email, Phone, Address, Tax status, Shopify ID, QBO ID, Sync status.
+**Order fields:** Date, Customer, Subtotal, Tax (amount and rate), Shipping, Discounts, Total, Line items.
+
+In environments supporting artifacts, generate an HTML comparison view with color-coded match status.
 
 ## Step 4: Suggest Next Actions
 
@@ -239,7 +478,9 @@ git commit -m "feat: add lookup command and skill for cross-system search"
 
 ---
 
-### Task 4: Create fix command and skill
+### Task 5: Create fix command and skill
+
+**Script integration:** Steps 2-3 (compute expected state, diff) delegate to `scripts/diff_records.py`. Claude fetches raw data via MCP, runs the script, presents the diff and proposed fixes. For artifacts, generate an HTML diff view.
 
 **Files:**
 - Create: `commands/fix.md`
@@ -286,21 +527,25 @@ Parse the user's input to find the record:
 
 Fetch the record from both Shopify and QBO using the same approach as the lookup skill.
 
-## Step 2: Compute Expected State
+## Step 2: Run Diff Script
 
-Use the same transform logic as the sync pipeline to determine what QBO should have:
+Save the fetched data to temp JSON files and run:
 
-**For invoices:**
-- Apply field mapping from `${CLAUDE_PLUGIN_ROOT}/references/field-mapping.md`
-- Resolve tax codes via `${CLAUDE_PLUGIN_ROOT}/tax-mapping.json`
-- Compute line amounts, tax totals, shipping, discounts
+```bash
+python ${CLAUDE_PLUGIN_ROOT}/scripts/diff_records.py \
+  --type invoice \
+  --shopify /tmp/shopify_order.json \
+  --qbo /tmp/qbo_invoice.json \
+  --tax-map ${CLAUDE_PLUGIN_ROOT}/tax-mapping.json
+```
 
-**For customers:**
-- Apply customer field mapping (name, email, phone, address, tax status)
+The script computes the expected QBO state using the same transform logic as the sync pipeline,
+diffs against the actual QBO record, and outputs structured discrepancies with proposed fixes
+and PrivateNote entries.
 
-## Step 3: Diff Actual vs Expected
+## Step 3: Present Discrepancies
 
-Compare every mapped field. Present each discrepancy in plain language:
+Render the script output as plain language. Present each discrepancy clearly:
 
 ```
 Invoice SH-1042:
@@ -366,7 +611,7 @@ git commit -m "feat: add fix command and skill for propose-then-confirm correcti
 
 ---
 
-### Task 5: Create delete command and skill
+### Task 6: Create delete command and skill
 
 **Files:**
 - Create: `commands/delete.md`
@@ -474,7 +719,9 @@ git commit -m "feat: add delete command and skill with safety checks"
 
 ---
 
-### Task 6: Create resolve-customers command and skill
+### Task 7: Create resolve-customers command and skill
+
+**Script integration:** Scan mode's cross-referencing (Step 2) delegates to `scripts/scan_customers.py`. Claude fetches raw customer lists via MCP, runs the script, presents categorized issues. For artifacts, generate an HTML dashboard of customer health.
 
 **Files:**
 - Create: `commands/resolve-customers.md`
@@ -526,9 +773,17 @@ Find and fix customer discrepancies between Shopify and QBO.
 - QBO synced: `SELECT Id, DisplayName, PrimaryEmailAddr, GivenName, FamilyName, PrimaryPhone, BillAddr, Notes FROM Customer WHERE Notes LIKE '%shopify-sync%'`
 - QBO all: `SELECT Id, DisplayName, PrimaryEmailAddr, Notes FROM Customer`
 
-### Step 2: Cross-Reference
+### Step 2: Run Customer Scan Script
 
-Build match sets by email address:
+Save the fetched customer lists and run:
+
+```bash
+python ${CLAUDE_PLUGIN_ROOT}/scripts/scan_customers.py \
+  --shopify /tmp/shopify_customers.json \
+  --qbo /tmp/qbo_customers.json
+```
+
+The script cross-references by email address and categorizes mismatches:
 
 | Category | Criteria | Severity |
 |----------|----------|----------|
@@ -596,7 +851,9 @@ git commit -m "feat: add resolve-customers command and skill for mismatch detect
 
 ---
 
-### Task 7: Create report command and skill
+### Task 8: Create report command and skill
+
+**Script integration:** All 4 report types delegate computation to `scripts/generate_report.py`. Claude fetches raw data via MCP, runs the script with `--type` and optional `--html-output` for artifacts. The script returns structured data for markdown rendering and optionally a self-contained HTML dashboard.
 
 **Files:**
 - Create: `commands/report.md`
@@ -653,13 +910,20 @@ Default to `sync-status` if the user just says "report" without context.
 All reports accept an optional date range. Default to current month.
 Parse natural language: "last week", "Q1", "March", "last 30 days".
 
+## Data Flow (all report types)
+
+1. Claude fetches raw data via MCP (queries vary by report type — see below)
+2. Save raw data to temp JSON files
+3. Run: `python ${CLAUDE_PLUGIN_ROOT}/scripts/generate_report.py --type <type> --shopify-orders so.json --qbo-invoices qi.json [--html-output report.html]`
+4. Present the script's structured output as rich markdown
+5. If `--html-output` was used, offer the HTML as an artifact
+
 ## Report: sync-status
 
-### Data Gathering
-- QBO synced records: `SELECT COUNT(*) FROM Invoice WHERE PrivateNote LIKE '%shopify-sync%'`
-- QBO synced customers: `SELECT COUNT(*) FROM Customer WHERE Notes LIKE '%shopify-sync%' OR PrivateNote LIKE '%shopify-sync%'`
-- Shopify totals: `get-customers` (count) and `get-orders` (count)
-- Recent errors: `SELECT Id, DocNumber, PrivateNote FROM Invoice WHERE PrivateNote LIKE '%error%'`
+### MCP Queries
+- QBO synced records: `SELECT Id, DocNumber, PrivateNote FROM Invoice WHERE PrivateNote LIKE '%shopify-sync%'`
+- QBO synced customers: `SELECT Id, DisplayName, PrimaryEmailAddr, Notes, PrivateNote FROM Customer`
+- Shopify: `get-customers` and `get-orders` (counts)
 
 ### Output Format
 ```
@@ -757,7 +1021,9 @@ git commit -m "feat: add report command and skill with 4 report types"
 
 ---
 
-### Task 8: Create undo command and skill
+### Task 9: Create undo command and skill
+
+**Script integration:** Step 2 (find affected records) delegates to `scripts/find_undo_targets.py`. Claude fetches QBO records with PrivateNotes via MCP, runs the script to parse action history and compute a reversal plan.
 
 **Files:**
 - Create: `commands/undo.md`
@@ -879,7 +1145,9 @@ git commit -m "feat: add undo command and skill for reversing recent actions"
 
 ---
 
-### Task 9: Update reconcile skill for record-by-record consistency
+### Task 10: Update reconcile skill for record-by-record consistency
+
+**Script integration:** The record-by-record comparison delegates to `scripts/diff_records.py` (per-record) and `scripts/generate_report.py --type reconciliation` (summary). Claude fetches matched pairs via MCP, runs diff_records on each pair, aggregates results.
 
 **Files:**
 - Modify: `commands/reconcile.md`
@@ -922,7 +1190,7 @@ git commit -m "feat: update reconcile to deep record-by-record consistency check
 
 ---
 
-### Task 10: Update plugin.json and README
+### Task 11: Update plugin.json and README
 
 **Files:**
 - Modify: `README.md`
@@ -946,7 +1214,7 @@ git commit -m "docs: update README and plugin.json for expanded command set"
 
 ---
 
-### Task 11: Push and update marketplace
+### Task 12: Push and update marketplace
 
 **Files:**
 - Modify (in my-claude-plugins): `.claude-plugin/marketplace.json` — bump version to 2.0.0
